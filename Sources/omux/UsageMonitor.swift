@@ -67,6 +67,10 @@ final class UsageMonitor: ObservableObject {
     }
 
     private func load() async {
+        if let demo = DebugHooks.demoUsage {
+            limits = demo.map { Limit(id: $0.label, label: $0.label, percent: $0.percent, resetsAt: nil) }
+            return
+        }
         guard let token = await Task.detached(operation: Self.readToken).value else {
             error = "Not signed in to Claude Code"
             return

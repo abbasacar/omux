@@ -2,6 +2,16 @@
 
 All notable changes to omux are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+### Added
+
+- `scripts/demo-screenshot.sh` makes the README screenshot from a demo workspace, with no personal data and no Claude sessions running.
+
+### Fixed
+
+- Window captures from the debug hooks showed terminals with a transparent background.
+
 ## [0.4.0] - 2026-10-29
 
 First release of this fork ([abbasacar/omux](https://github.com/abbasacar/omux)). Earlier versions are from [onurozcan/omux](https://github.com/onurozcan/omux).

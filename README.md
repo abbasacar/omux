@@ -4,9 +4,9 @@ A native macOS terminal for running many [Claude Code](https://claude.com/claude
 
 > **This is a fork** of [onurozcan/omux](https://github.com/onurozcan/omux), which built the app. This fork adds a grid view, broadcast, a command palette, recent conversations in the sidebar and the other changes listed under [What this fork adds](#what-this-fork-adds). Everything else is the original's work.
 
-![omux with a worktree session running three subagents, a session waiting on Allow or Deny, and the Changes tab showing the diff with a review note](docs/screenshot.png)
+![omux in grid view: four sessions of a project side by side, one working, one waiting on Allow or Deny, one done and a dev server, with the sidebar listing projects, sessions, recent conversations and usage limits](docs/screenshot.png)
 
-*Screenshot from the original project; it doesn't show this fork's additions.*
+*A demo workspace with sample sessions, made with [`scripts/demo-screenshot.sh`](scripts/demo-screenshot.sh).*
 
 Built with SwiftUI and [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm).
 
@@ -30,6 +30,10 @@ Built with SwiftUI and [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm).
 See [CHANGELOG.md](CHANGELOG.md) for details.
 
 ## Features
+
+![omux with a worktree session running three subagents, a session waiting on Allow or Deny, and the Changes tab showing the diff with a review note](docs/screenshot-original.png)
+
+*Worktree sessions, subagents and the Changes tab. Screenshot from the original project.*
 
 - **Projects and sessions.** A project is a folder plus a default command; sessions live under it in the sidebar. Drag to reorder or move sessions between projects, rename them, and give them colors (right-click › Color).
 - **Conversations that resume.** Each session that runs `claude` is pinned to its own session id, so quitting and reopening omux continues the same conversation.
@@ -87,6 +91,8 @@ osascript -l JavaScript -e "ObjC.import('Foundation'); \$.NSDistributedNotificat
 ```
 
 `snapshot` saves each window to `~/Library/Caches/net.pf1.omux/snapshots/`. The other commands open the palette, broadcast, recent conversations or Instructions & Skills, and open or close test shell sessions; see `DebugHooks.swift`.
+
+`scripts/demo-screenshot.sh` remakes the README screenshot after `./build.sh`. It runs a second omux on a demo workspace with sample projects, sessions and conversation history, captures it and quits it. Your own omux, workspace, conversations and settings are left as they were; a window flashes up for about ten seconds.
 
 ## Keyboard shortcuts
 
