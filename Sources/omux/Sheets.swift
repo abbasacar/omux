@@ -69,15 +69,31 @@ struct QuickSwitcher: View {
         }
     }
 
-    /// Sessions first; commands join once you type, or alone after a leading ">".
+    /// Conversations you can reopen, labelled by Claude's title.
+    private var recents: [Item] {
+        store.closedRecentSessions.map { recent in
+            Item(id: "recent-\(recent.id)", title: recent.displayTitle,
+                 detail: "\(recent.folder) · \(recent.date.formatted(.relative(presentation: .named)))",
+                 icon: "clock.arrow.circlepath") {
+                store.openClaudeSession(recent)
+            }
+        }
+    }
+
+    /// Sessions first, then recent conversations; commands join once you type, or
+    /// alone after a leading ">".
     private var items: [Item] {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         if trimmed.hasPrefix(">") {
             let q = trimmed.dropFirst().trimmingCharacters(in: .whitespaces)
             return commands.filter { q.isEmpty || Self.fuzzy($0.title, q) }
         }
-        if trimmed.isEmpty { return sessions }
+        if trimmed.isEmpty { return sessions + recents.prefix(8) }
+        let recentMatches = store.closedRecentSessions.filter {
+            "\($0.title ?? "") \($0.prompt) \($0.folder)".localizedCaseInsensitiveContains(trimmed)
+        }.map(\.id)
         return sessions.filter { Self.fuzzy("\($0.title) \($0.detail ?? "")", trimmed) }
+            + recents.filter { item in recentMatches.contains { "recent-\($0)" == item.id } }.prefix(20)
             + commands.filter { Self.fuzzy($0.title, trimmed) }
     }
 
@@ -97,7 +113,7 @@ struct QuickSwitcher: View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Jump to session, or > for commands…", text: $query)
+                TextField("Jump to a session or old conversation, > for commands…", text: $query)
                     .textFieldStyle(.plain)
                     .font(.title3)
                     .focused($focused)
@@ -310,14 +326,13 @@ struct GroupEditSheet: View {
 struct RecentSessionsSheet: View {
     @EnvironmentObject var store: Store
     @Environment(\.dismiss) private var dismiss
-    @State private var sessions: [RecentSession] = []
-    @State private var loaded = false
+    private var sessions: [RecentSession] { store.recentSessions }
     @State private var query = ""
     @State private var byFolder = false
     @FocusState private var focused: Bool
 
     private var matches: [RecentSession] {
-        sessions.filter { query.isEmpty || "\($0.prompt) \($0.folder)".localizedCaseInsensitiveContains(query) }
+        sessions.filter { query.isEmpty || "\($0.title ?? "") \($0.prompt) \($0.folder)".localizedCaseInsensitiveContains(query) }
     }
 
     /// Folders ordered by their most recent session; sessions stay newest-first within each.
@@ -351,7 +366,7 @@ struct RecentSessionsSheet: View {
             }
             .padding(12)
             Divider()
-            if !loaded {
+            if !store.recentLoaded {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if matches.isEmpty {
                 Text(sessions.isEmpty ? "No Claude sessions found in ~/.claude/projects" : "No matches")
@@ -376,8 +391,7 @@ struct RecentSessionsSheet: View {
         .onExitCommand { dismiss() }
         .task {
             focused = true
-            sessions = await Task.detached { RecentSession.load() }.value
-            loaded = true
+            store.refreshRecentSessions()
         }
     }
 
@@ -385,11 +399,14 @@ struct RecentSessionsSheet: View {
         Button { pick(session) } label: {
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
-                    Text(session.prompt).lineLimit(1)
+                    Text(session.displayTitle).lineLimit(1)
                     Spacer()
                     if openIDs.contains(session.id) {
                         Text("open").font(.caption2).foregroundStyle(.secondary)
                     }
+                }
+                if session.title != nil {
+                    Text(session.prompt).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
                 HStack {
                     if showFolder { Text(session.folder) }

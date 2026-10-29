@@ -28,7 +28,7 @@ struct Sidebar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Traffic lights occupy the top-left; actions sit on the right.
+            // Kept below the title bar: on newer macOS it takes clicks meant for controls under it.
             HStack(spacing: 14) {
                 Spacer()
                 Button { store.newTab() } label: { Image(systemName: "plus") }
@@ -85,6 +85,7 @@ struct Sidebar: View {
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
 
+            RecentSection()
             Rectangle().fill(.primary.opacity(0.08)).frame(height: 1)
             UsageView()
         }
@@ -98,7 +99,6 @@ struct Sidebar: View {
             Button("New Session") { store.newTab() }
             Button("New Shell") { store.newTab(command: "") }
         }
-        .ignoresSafeArea(.container, edges: .top)
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             for provider in providers {
                 provider.loadDataRepresentation(forTypeIdentifier: UTType.fileURL.identifier) { data, _ in
@@ -193,6 +193,78 @@ struct TabRow: View {
             hovering = over
             if over { store.refreshBusy(tab.id) }
         }
+    }
+}
+
+/// The last few Claude conversations that aren't open, one click from reopening.
+struct RecentSection: View {
+    @EnvironmentObject var store: Store
+    @AppStorage(Prefs.recentCollapsed) private var collapsed = false
+
+    var body: some View {
+        let recents = Array(store.closedRecentSessions.prefix(6))
+        if !recents.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                Rectangle().fill(.primary.opacity(0.08)).frame(height: 1)
+                HStack(spacing: 6) {
+                    Button { withAnimation(.snappy(duration: 0.2)) { collapsed.toggle() } } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 7, weight: .bold))
+                                .rotationEffect(.degrees(collapsed ? 0 : 90))
+                            Text("Recent").font(.system(size: 11, weight: .semibold))
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .help(collapsed ? "Show recent conversations" : "Hide recent conversations")
+                    Button("Show All") { store.showRecentSessions = true }
+                        .font(.caption)
+                        .help("Search every Claude conversation (⇧⌘O)")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12)
+                .frame(height: 26)
+                if !collapsed {
+                    ForEach(recents) { RecentRow(session: $0) }
+                        .padding(.bottom, 2)
+                }
+            }
+        }
+    }
+}
+
+struct RecentRow: View {
+    @EnvironmentObject var store: Store
+    let session: RecentSession
+    @State private var hovering = false
+
+    var body: some View {
+        Button { store.openClaudeSession(session) } label: {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: hovering ? "play.fill" : "clock")
+                    .font(.system(size: 9))
+                    .frame(width: 10)
+                    .padding(.top, 3)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(session.displayTitle).lineLimit(1).foregroundStyle(.primary)
+                    Text("\((session.cwd as NSString).lastPathComponent) · \(session.date.formatted(.relative(presentation: .named)))")
+                        .font(.caption)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 3)
+            .background(hovering ? Color.primary.opacity(0.07) : .clear, in: RoundedRectangle(cornerRadius: 6))
+            .padding(.horizontal, 6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help("Reopen “\(session.displayTitle)” in \(session.folder)\n\(session.prompt)")
     }
 }
 

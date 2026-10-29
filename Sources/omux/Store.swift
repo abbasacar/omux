@@ -33,6 +33,11 @@ final class Store: ObservableObject {
     @Published var showQuickSwitcher = false
     @Published var showRecentSessions = false
     @Published var showBroadcast = false
+    /// Claude conversations in ~/.claude/projects, newest first.
+    @Published private(set) var recentSessions: [RecentSession] = []
+    /// The first scan of recent conversations has finished.
+    @Published private(set) var recentLoaded = false
+    private var loadingRecent = false
     /// A file the user ⌘-clicked in a terminal; the files panel shows it.
     @Published var previewRequest: String?
     /// File paths mentioned in the selected session's output, newest last.
@@ -77,6 +82,7 @@ final class Store: ObservableObject {
         NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
             DispatchQueue.main.async {
                 if let id = Store.shared.selectedTabID { Store.shared.clearAttention(id) }
+                Store.shared.refreshRecentSessions()
             }
         }
 
@@ -89,6 +95,7 @@ final class Store: ObservableObject {
             return event
         }
 
+        refreshRecentSessions()
         if saved == nil { save() }
         if UserDefaults.standard.bool(forKey: Prefs.autoResume) {
             startAllSessions()
@@ -375,6 +382,24 @@ final class Store: ObservableObject {
         selectedTabID = tab.id
     }
 
+    /// Recent conversations that aren't open as a session.
+    var closedRecentSessions: [RecentSession] {
+        let open = Set(allTabs.map(\.tab.claudeSessionID))
+        return recentSessions.filter { !open.contains($0.id) }
+    }
+
+    /// Rescans Claude's conversations off the main thread.
+    func refreshRecentSessions() {
+        guard !loadingRecent else { return }
+        loadingRecent = true
+        Task {
+            let sessions = await Task.detached { RecentSession.load() }.value
+            loadingRecent = false
+            if sessions != recentSessions { recentSessions = sessions }
+            if !recentLoaded { recentLoaded = true }
+        }
+    }
+
     func openFolderPanel() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
@@ -511,6 +536,7 @@ final class Store: ObservableObject {
         Notifier.shared.clear(tabID: id)
         browsers.removeValue(forKey: id)?.close()
         if openAgent?.tabID == id { openAgent = nil }
+        refreshRecentSessions()
         groups[loc.group].tabs.remove(at: loc.tab)
         if selectedTabID == id {
             let siblings = groups[loc.group].tabs

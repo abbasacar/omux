@@ -95,6 +95,7 @@ enum Prefs {
     static let notifyPrograms = "notifyPrograms"
     static let gridMode = "gridMode"
     static let showMenuBar = "showMenuBar"
+    static let recentCollapsed = "recentCollapsed"
 }
 
 struct SettingsView: View {
@@ -214,7 +215,6 @@ struct ContentView: View {
                         .frame(minWidth: 260, idealWidth: 380, maxWidth: 900)
                 }
             }
-            .ignoresSafeArea(.container, edges: .top)
         }
         // Hiding the toolbar itself also hides the window buttons on some macOS versions.
         .toolbarBackground(.hidden, for: .windowToolbar)
