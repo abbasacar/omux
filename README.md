@@ -18,6 +18,7 @@ Version 0.4.0, on top of the original's 0.3.0:
 - **Broadcast** (⇧⌘B). Type one prompt and send it to any set of running sessions, for example every session in a project.
 - **Command palette** (⌘K). Jump to a session, reopen an old conversation or run any command, including switching themes. Fuzzy matching, ↑/↓ to move, `>` to search only commands.
 - **Recent conversations in the sidebar.** Your latest Claude conversations that aren't open, one click from reopening. Drag the divider above it to size it or click its header to collapse it, like the Files browser; Show All searches the rest. Conversations are labelled with the title Claude Code gives them instead of the first words of the first prompt.
+- **Instructions & Skills** (⇧⌘I). One window for everything that shapes Claude: your global and project `CLAUDE.md`, skills and custom agents (create them from a template, edit them, or see the ones synced from claude.ai), plus **omux-only instructions** that omux adds to every Claude session it starts, globally and per project, without touching your files.
 - **Needs-you triage.** A sidebar banner counts sessions waiting on you; ⌘J jumps to the next one.
 - **Menu bar status.** A menu bar icon lists every session with its status and shows a count while sessions need you. Turn it off in Settings › Menu Bar.
 - **Theme-matched colors.** Status dots, highlights and usage bars use the theme's own colors. A session's color shows as a bar and a tint on its row, and the dot only shows status, so a red session can't be mistaken for an error. Stopped sessions get a hollow dot instead of fading.
@@ -91,6 +92,7 @@ open /Applications/omux.app
 | Next session needing you | ⌘J |
 | Grid view | ⇧⌘G |
 | Broadcast to sessions | ⇧⌘B |
+| Instructions & Skills | ⇧⌘I |
 | Bigger / smaller / actual font size | ⌘= / ⌘− / ⌘0 |
 | Next / previous session | ⇧⌘] / ⇧⌘[ |
 | Session 1–9 in the current project | ⌘1 … ⌘9 |
@@ -106,6 +108,8 @@ omux has no telemetry and makes two kinds of network request. This fork adds non
 Local files omux touches:
 
 - `~/Library/Application Support/omux/workspace.json`: your projects and sessions (plus a `.bak` copy).
+- `~/.claude/CLAUDE.md`, `~/.claude/skills` and `~/.claude/agents`, and the same inside a project's folder (`CLAUDE.md`, `.claude/skills`, `.claude/agents`): read by the Instructions & Skills window, and written only when you save or create something there.
+- `~/Library/Application Support/omux/instructions.md` and `prompts/`: your omux-only instructions, and the text passed to each project's Claude sessions with `--append-system-prompt`. Project instructions are saved in `workspace.json`.
 - `~/.claude/projects`: read to list recent conversations and their titles, to check whether a session's conversation exists, and to show a running session's subagents and their transcripts.
 - Worktree sessions run `git` in your repository, and creating a pull request runs `git push` through your login shell. Nothing else is pushed or committed unless you confirm it.
 - Elements picked in the browser are saved under your temporary folder (`omux-picks`) so Claude can read them.

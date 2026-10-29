@@ -50,6 +50,9 @@ struct QuickSwitcher: View {
             Item(id: "broadcast", title: "Broadcast to Sessions…", shortcut: "⇧⌘B", icon: "dot.radiowaves.left.and.right") {
                 store.showBroadcast = true
             },
+            Item(id: "instructions", title: "Instructions & Skills…", shortcut: "⇧⌘I", icon: "text.book.closed") {
+                store.showInstructions = true
+            },
             Item(id: "attention", title: "Next Session Needing You", shortcut: "⌘J", icon: "bell") { store.selectNextNeedingYou() },
             Item(id: "panel", title: "Toggle Right Panel", shortcut: "⌥⌘F", icon: "sidebar.trailing") { toggle(Prefs.showFiles) },
             Item(id: "files", title: "Show Files", shortcut: "⌥⌘1", icon: "doc") { store.showPanel(.files) },

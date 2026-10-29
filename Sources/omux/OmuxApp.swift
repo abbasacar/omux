@@ -136,6 +136,17 @@ struct SettingsView: View {
                     Text("Hour").tag(3600.0)
                 }
             }
+            Section("Claude") {
+                LabeledContent("Instructions, skills and agents") {
+                    Button("Open…") {
+                        AppDelegate.openWindow?(id: "main")
+                        Store.shared.showInstructions = true
+                    }
+                }
+                Text("CLAUDE.md, omux-only instructions, skills and custom agents, for every project or the current one. Also ⇧⌘I.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Section("Menu Bar") {
                 Toggle("Show session status in the menu bar", isOn: $showMenuBar)
             }
@@ -236,6 +247,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $store.showRecentSessions) { RecentSessionsSheet().environmentObject(store) }
         .sheet(isPresented: $store.showBroadcast) { BroadcastSheet().environmentObject(store) }
+        .sheet(isPresented: $store.showInstructions) { InstructionsSheet().environmentObject(store) }
         .sheet(item: $store.editingTabID) { TabEditSheet(tabID: $0).environmentObject(store) }
         .sheet(item: $store.editingGroupID) { GroupEditSheet(groupID: $0).environmentObject(store) }
         .onAppear { AppDelegate.openWindow = openWindow }
@@ -421,6 +433,9 @@ struct AppCommands: Commands {
             Button("Next Session Needing You") { store.selectNextNeedingYou() }.keyboardShortcut("j")
             Button("Broadcast to Sessions…") { store.showBroadcast = true }
                 .keyboardShortcut("b", modifiers: [.command, .shift])
+                .disabled(store.isSheetOpen)
+            Button("Instructions & Skills…") { store.showInstructions = true }
+                .keyboardShortcut("i", modifiers: [.command, .shift])
                 .disabled(store.isSheetOpen)
             Button("Next Session") { store.selectRelative(1) }.keyboardShortcut("]", modifiers: [.command, .shift])
             Button("Previous Session") { store.selectRelative(-1) }.keyboardShortcut("[", modifiers: [.command, .shift])

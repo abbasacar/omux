@@ -40,6 +40,7 @@ final class Store: ObservableObject {
     @Published var showQuickSwitcher = false
     @Published var showRecentSessions = false
     @Published var showBroadcast = false
+    @Published var showInstructions = false
     /// A command picked in the palette, run once the palette has closed so it can open its own sheet.
     var pendingPaletteAction: (() -> Void)?
     /// The window sessions live in; ⌘W closes a session only there.
@@ -331,7 +332,8 @@ final class Store: ObservableObject {
         guard let loc = location(of: id) else { return }
         let tab = groups[loc.group].tabs[loc.tab]
         let session = tab.claudeSessionID.uuidString.lowercased()
-        let command = Self.claudeSessionExists(session) ? "claude --resume \(session)" : "claude --continue"
+        let resume = Self.claudeSessionExists(session) ? "--resume \(session)" : "--continue"
+        let command = ["claude", OmuxInstructions.flag(for: groups[loc.group]), resume].compactMap { $0 }.joined(separator: " ")
         if let view = terminals[id], !(runtime[id]?.exited ?? true) {
             guard !(runtime[id]?.busy ?? false) else { return }
             view.send(txt: command + "\n")
@@ -352,10 +354,13 @@ final class Store: ObservableObject {
         guard parts[0] == "claude" else { return raw }
         let rest = parts.count > 1 ? parts[1] : ""
         let words = Set(rest.split(separator: " ").map(String.init))
-        if !words.isDisjoint(with: ["--resume", "-r", "--continue", "-c", "--session-id"]) { return raw }
+        let instructions = OmuxInstructions.flag(for: group) ?? ""
+        if !words.isDisjoint(with: ["--resume", "-r", "--continue", "-c", "--session-id"]) {
+            return ["claude", instructions, rest].filter { !$0.isEmpty }.joined(separator: " ")
+        }
         let session = tab.claudeSessionID.uuidString.lowercased()
         let flag = Self.claudeSessionExists(session) ? "--resume \(session)" : "--session-id \(session)"
-        return ["claude", flag, rest].filter { !$0.isEmpty }.joined(separator: " ")
+        return ["claude", instructions, flag, rest].filter { !$0.isEmpty }.joined(separator: " ")
     }
 
     /// Claude Code writes each conversation to ~/.claude/projects/<project>/<session>.jsonl.
@@ -710,7 +715,7 @@ final class Store: ObservableObject {
 
     /// A sheet is up; commands that open another one wait, since SwiftUI would drop it.
     var isSheetOpen: Bool {
-        showQuickSwitcher || showRecentSessions || showBroadcast
+        showQuickSwitcher || showRecentSessions || showBroadcast || showInstructions
             || editingTabID != nil || editingGroupID != nil || newWorktreeGroupID != nil
     }
 

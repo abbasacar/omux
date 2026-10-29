@@ -11,6 +11,7 @@ First release of this fork ([abbasacar/omux](https://github.com/abbasacar/omux))
 - **Grid view** (⇧⌘G): every running session in the project tiled side by side. Clicking into a tile selects that session; double-clicking its header shows it alone.
 - **Broadcast** (⇧⌘B): send one prompt to several running sessions.
 - **Command palette** (⌘K): the quick switcher also runs commands, with fuzzy matching and ↑/↓ navigation. Start with `>` to search only commands.
+- **Instructions & Skills** (⇧⌘I): edit the global and project `CLAUDE.md`, browse, create and edit skills and custom agents (synced claude.ai skills are shown read-only), and set **omux-only instructions**, globally and per project, which omux passes to every Claude session it starts with `--append-system-prompt`. Changes apply to conversations started afterwards.
 - **Next session needing you** (⌘J), and a sidebar banner counting sessions waiting on you.
 - **Menu bar status item** listing every session and its state, with a count while sessions need you.
 - **Font zoom** (⌘= / ⌘− / ⌘0).

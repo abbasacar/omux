@@ -97,6 +97,8 @@ struct TabGroup: Identifiable, Codable, Hashable {
     var isCollapsed = false
     /// New sessions get their own git worktree.
     var useWorktrees = false
+    /// Extra instructions omux gives Claude in this project's sessions, after the global ones.
+    var instructions: String?
     var tabs: [TabItem] = []
 
     init(name: String, directory: String? = nil, tabs: [TabItem] = []) {
@@ -113,6 +115,7 @@ struct TabGroup: Identifiable, Codable, Hashable {
         command = try c.decodeIfPresent(String.self, forKey: .command)
         isCollapsed = try c.decodeIfPresent(Bool.self, forKey: .isCollapsed) ?? false
         useWorktrees = try c.decodeIfPresent(Bool.self, forKey: .useWorktrees) ?? false
+        instructions = try c.decodeIfPresent(String.self, forKey: .instructions)
         tabs = try c.decodeIfPresent([TabItem].self, forKey: .tabs) ?? []
     }
 }
