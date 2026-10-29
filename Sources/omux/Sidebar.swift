@@ -443,7 +443,7 @@ struct GroupMenu: View {
         Button("Edit Project…") { store.editingGroupID = group.id }
         Button("Instructions & Skills…") {
             store.selectedTabID = group.tabs.first?.id ?? store.selectedTabID
-            store.showInstructions = true
+            store.openInstructions()
         }
         Divider()
         Button("Move Up") { store.moveGroup(group.id, by: -1) }

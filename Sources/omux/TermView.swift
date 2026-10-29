@@ -195,35 +195,67 @@ struct TerminalHost: NSViewRepresentable {
     /// Takes keyboard focus when attached. The grid shows many hosts but focuses one.
     var focus = true
 
-    final class Coordinator {
-        var currentID: UUID?
-        var hadFocus = false
-    }
+    final class Coordinator { var hadFocus = false }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    func makeNSView(context: Context) -> NSView {
-        let container = NSView()
-        container.wantsLayer = true
-        return container
+    func makeNSView(context: Context) -> TerminalContainer {
+        TerminalContainer()
     }
 
-    func updateNSView(_ container: NSView, context: Context) {
+    func updateNSView(_ container: TerminalContainer, context: Context) {
         container.layer?.backgroundColor = theme.background.cgColor
-        let attach = context.coordinator.currentID != termView.tabID || termView.superview !== container
+        // Only a change of terminal moves it here. A host that already had it never takes it
+        // back, so one on its way out (grid tiles after sessions close) can't strand it.
+        let changed = container.termView !== termView
+        if changed { container.termView = termView }
         // In the grid, a tile that becomes the selection (⌘J, the sidebar) takes the keyboard.
         let gainedFocus = focus && !context.coordinator.hadFocus
         context.coordinator.hadFocus = focus
-        if attach {
-            context.coordinator.currentID = termView.tabID
-            container.subviews.forEach { $0.removeFromSuperview() }
-            termView.frame = container.bounds
-            termView.autoresizingMask = [.width, .height]
-            container.addSubview(termView)
-        }
-        guard focus, attach || gainedFocus else { return }
+        guard focus, changed || gainedFocus else { return }
         DispatchQueue.main.async {
+            guard termView.superview === container else { return }
             termView.window?.makeFirstResponder(termView)
+        }
+    }
+}
+
+/// Holds a terminal while it's on screen. A terminal is one view, so only one container
+/// can show it: the newest one in a window. A container that leaves the window hands its
+/// terminal to another that wants it.
+final class TerminalContainer: NSView {
+    private static let all = NSHashTable<TerminalContainer>.weakObjects()
+
+    weak var termView: TermView? {
+        didSet { claim() }
+    }
+
+    init() {
+        super.init(frame: .zero)
+        wantsLayer = true
+        Self.all.add(self)
+    }
+
+    required init?(coder: NSCoder) { fatalError("not supported") }
+
+    /// Shows the terminal here, if this container is on screen.
+    private func claim() {
+        guard let termView, window != nil, termView.superview !== self else { return }
+        subviews.forEach { $0.removeFromSuperview() }
+        termView.frame = bounds
+        termView.autoresizingMask = [.width, .height]
+        addSubview(termView)
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window != nil {
+            claim()
+        } else if let termView, termView.superview === self {
+            termView.removeFromSuperview()
+            Self.all.allObjects
+                .first { $0 !== self && $0.termView === termView && $0.window != nil }?
+                .claim()
         }
     }
 }

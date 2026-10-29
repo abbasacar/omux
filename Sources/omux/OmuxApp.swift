@@ -19,6 +19,11 @@ struct OmuxApp: App {
 
         Settings { SettingsView() }
 
+        Window("Instructions & Skills", id: "instructions") {
+            InstructionsWindow().environmentObject(store)
+        }
+        .defaultSize(width: 860, height: 600)
+
         MenuBarExtra(isInserted: $showMenuBar) {
             MenuBarContent().environmentObject(store)
         } label: {
@@ -138,10 +143,7 @@ struct SettingsView: View {
             }
             Section("Claude") {
                 LabeledContent("Instructions, skills and agents") {
-                    Button("Open…") {
-                        AppDelegate.openWindow?(id: "main")
-                        Store.shared.showInstructions = true
-                    }
+                    Button("Open…") { Store.shared.openInstructions() }
                 }
                 Text("CLAUDE.md, omux-only instructions, skills and custom agents, for every project or the current one. Also ⇧⌘I.")
                     .font(.caption)
@@ -247,7 +249,6 @@ struct ContentView: View {
         }
         .sheet(isPresented: $store.showRecentSessions) { RecentSessionsSheet().environmentObject(store) }
         .sheet(isPresented: $store.showBroadcast) { BroadcastSheet().environmentObject(store) }
-        .sheet(isPresented: $store.showInstructions) { InstructionsSheet().environmentObject(store) }
         .sheet(item: $store.editingTabID) { TabEditSheet(tabID: $0).environmentObject(store) }
         .sheet(item: $store.editingGroupID) { GroupEditSheet(groupID: $0).environmentObject(store) }
         .onAppear { AppDelegate.openWindow = openWindow }
@@ -434,9 +435,8 @@ struct AppCommands: Commands {
             Button("Broadcast to Sessions…") { store.showBroadcast = true }
                 .keyboardShortcut("b", modifiers: [.command, .shift])
                 .disabled(store.isSheetOpen)
-            Button("Instructions & Skills…") { store.showInstructions = true }
+            Button("Instructions & Skills…") { store.openInstructions() }
                 .keyboardShortcut("i", modifiers: [.command, .shift])
-                .disabled(store.isSheetOpen)
             Button("Next Session") { store.selectRelative(1) }.keyboardShortcut("]", modifiers: [.command, .shift])
             Button("Previous Session") { store.selectRelative(-1) }.keyboardShortcut("[", modifiers: [.command, .shift])
             Divider()

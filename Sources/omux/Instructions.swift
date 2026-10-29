@@ -108,10 +108,11 @@ struct ClaudeAsset: Identifiable, Hashable {
 }
 
 /// One place for everything that shapes Claude's behavior in omux: CLAUDE.md files,
-/// omux's own instructions, skills and custom agents, globally and for the current project.
-struct InstructionsSheet: View {
+/// omux's own instructions, skills and custom agents, globally and for the selected
+/// project. A window of its own, so it can stay open beside the sessions.
+struct InstructionsWindow: View {
     @EnvironmentObject var store: Store
-    @Environment(\.dismiss) private var dismiss
+    @AppStorage(Prefs.theme) private var themeName = Theme.dark.rawValue
 
     private enum Item: Hashable {
         case claudeGlobal, omuxGlobal, claudeProject, omuxProject
@@ -123,6 +124,10 @@ struct InstructionsSheet: View {
     @State private var text = ""
     @State private var saved = ""
     @State private var creating: ClaudeAsset.Kind?
+    /// What the editor holds was loaded for this project and file, so a save after the
+    /// selection moves on still lands where it came from.
+    @State private var loadedGroupID: UUID?
+    @State private var loadedFile: URL?
 
     private var group: TabGroup? { store.selectedGroup }
     private var projectDir: URL? {
@@ -136,9 +141,19 @@ struct InstructionsSheet: View {
             Divider()
             detail.frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 820, height: 560)
+        .frame(minWidth: 680, minHeight: 420)
+        // Light or dark like the main window, whatever the system appearance.
+        .preferredColorScheme((Theme(rawValue: themeName) ?? .dark).colorScheme)
         .onAppear { reloadAssets(); load() }
-        .onChange(of: selection) { _, _ in load() }
+        .onDisappear { saveIfNeeded() }
+        .onChange(of: selection) { old, _ in saveIfNeeded(for: old); load() }
+        // Follows the project selected in the main window; unsaved edits are kept first.
+        .onChange(of: group?.id) { _, _ in
+            saveIfNeeded(for: selection)
+            reloadAssets()
+            if case .asset(let a)? = selection, a.inProject { selection = .claudeGlobal }
+            load()
+        }
         .sheet(item: $creating) { kind in
             NewAssetSheet(kind: kind, hasProject: projectDir != nil) { name, inProject in
                 create(kind, name: name, inProject: inProject)
@@ -178,8 +193,11 @@ struct InstructionsSheet: View {
                     .help("Create a skill or a custom agent")
                     .accessibilityLabel("New skill or agent")
                 Spacer()
-                Button("Done") { saveIfNeeded(); dismiss() }
-                    .keyboardShortcut(.cancelAction)
+                Button { reloadAssets() } label: { Image(systemName: "arrow.clockwise") }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .help("Look for skills and agents again")
+                    .accessibilityLabel("Refresh")
             }
             .padding(10)
         }
@@ -328,6 +346,8 @@ struct InstructionsSheet: View {
     }
 
     private func load() {
+        loadedGroupID = group?.id
+        loadedFile = fileURL
         let value: String
         switch selection {
         case .omuxGlobal: value = OmuxInstructions.global
@@ -338,21 +358,28 @@ struct InstructionsSheet: View {
         saved = value
     }
 
-    private func saveIfNeeded() {
-        if text != saved, !readOnly { save() }
+    private func saveIfNeeded(for item: Item?? = nil) {
+        let target = item ?? selection
+        if case .asset(let a)? = target, a.synced { return }
+        if text != saved, target != nil { save(target) }
     }
 
-    private func save() {
-        switch selection {
+    private func save() { save(selection) }
+
+    /// Saves the editor to where it was loaded from: `item`, in the project it was loaded for.
+    private func save(_ item: Item?) {
+        switch item {
         case .omuxGlobal:
             OmuxInstructions.global = text
         case .omuxProject:
-            if let id = group?.id {
+            if let id = loadedGroupID {
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 store.updateGroup(id) { $0.instructions = trimmed.isEmpty ? nil : text }
             }
+        case nil:
+            return
         default:
-            guard let file = fileURL else { return }
+            guard let file = loadedFile else { return }
             try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             guard (try? text.write(to: file, atomically: true, encoding: .utf8)) != nil else { NSSound.beep(); return }
         }

@@ -11,7 +11,7 @@ First release of this fork ([abbasacar/omux](https://github.com/abbasacar/omux))
 - **Grid view** (⇧⌘G): every running session in the project tiled side by side. Clicking into a tile selects that session; double-clicking its header shows it alone.
 - **Broadcast** (⇧⌘B): send one prompt to several running sessions.
 - **Command palette** (⌘K): the quick switcher also runs commands, with fuzzy matching and ↑/↓ navigation. Start with `>` to search only commands.
-- **Instructions & Skills** (⇧⌘I): edit the global and project `CLAUDE.md`, browse, create and edit skills and custom agents (synced claude.ai skills are shown read-only), and set **omux-only instructions**, globally and per project, which omux passes to every Claude session it starts with `--append-system-prompt`. Changes apply to conversations started afterwards.
+- **Instructions & Skills** (⇧⌘I), in its own window that follows the selected project: edit the global and project `CLAUDE.md`, browse, create and edit skills and custom agents (synced claude.ai skills are shown read-only), and set **omux-only instructions**, globally and per project, which omux passes to every Claude session it starts with `--append-system-prompt`. Changes apply to conversations started afterwards.
 - **Next session needing you** (⌘J), and a sidebar banner counting sessions waiting on you.
 - **Menu bar status item** listing every session and its state, with a count while sessions need you.
 - **Font zoom** (⌘= / ⌘− / ⌘0).
@@ -35,6 +35,7 @@ First release of this fork ([abbasacar/omux](https://github.com/abbasacar/omux))
 
 ### Fixed
 
+- Grid: closing sessions until one is left could leave the grid blank until you left grid view.
 - Grid: tiles keep a minimum size and the grid scrolls when there are more sessions than fit; a single click on a tile's header selects it without waiting for a double click; a hint explains a grid with only one running session.
 - Command palette: ↑/↓ move the highlight; commands that open another window (Broadcast, Edit Session, Open Recent) open it; the mouse highlights rows. Commands that open a window are disabled while another one is open.
 - Clicking a session in the sidebar no longer risks selecting the terminal you were typing in again.

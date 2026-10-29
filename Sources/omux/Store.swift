@@ -40,7 +40,6 @@ final class Store: ObservableObject {
     @Published var showQuickSwitcher = false
     @Published var showRecentSessions = false
     @Published var showBroadcast = false
-    @Published var showInstructions = false
     /// A command picked in the palette, run once the palette has closed so it can open its own sheet.
     var pendingPaletteAction: (() -> Void)?
     /// The window sessions live in; ⌘W closes a session only there.
@@ -715,8 +714,14 @@ final class Store: ObservableObject {
 
     /// A sheet is up; commands that open another one wait, since SwiftUI would drop it.
     var isSheetOpen: Bool {
-        showQuickSwitcher || showRecentSessions || showBroadcast || showInstructions
+        showQuickSwitcher || showRecentSessions || showBroadcast
             || editingTabID != nil || editingGroupID != nil || newWorktreeGroupID != nil
+    }
+
+    /// Opens Instructions & Skills in its own window, beside the sessions.
+    func openInstructions() {
+        AppDelegate.openWindow?(id: "instructions")
+        NSApp.activate()
     }
 
     func runPendingPaletteAction() {

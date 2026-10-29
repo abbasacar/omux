@@ -5,7 +5,9 @@ import AppKit
 ///
 /// Post the distributed notification `net.pf1.omux.debug` with one of these as its object:
 /// `snapshot` writes each visible window to ~/Library/Caches/net.pf1.omux/snapshots/;
-/// `palette`, `broadcast` and `recent` open those sheets; `close` closes any sheet.
+/// `palette`, `broadcast`, `recent` and `instructions` open those; `close` closes any sheet.
+/// `newshell` opens a plain shell session in the selected project; `closeshell` closes the
+/// newest session `newshell` opened (and never any other).
 @MainActor
 enum DebugHooks {
     static func install() {
@@ -16,13 +18,22 @@ enum DebugHooks {
         }
     }
 
+    /// Sessions `newshell` opened, newest last; `closeshell` only closes these.
+    private static var opened: [UUID] = []
+
     private static func run(_ command: String) {
         let store = Store.shared
         switch command {
+        case "newshell":
+            store.newTab(command: "")
+            if let id = store.selectedTabID { opened.append(id) }
+        case "closeshell":
+            if let id = opened.popLast() { store.closeTab(id) }
         case "snapshot": snapshot()
         case "palette": store.showQuickSwitcher = true
         case "broadcast": store.showBroadcast = true
         case "recent": store.showRecentSessions = true
+        case "instructions": store.openInstructions()
         case "close":
             store.showQuickSwitcher = false
             store.showBroadcast = false
