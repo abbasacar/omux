@@ -29,32 +29,37 @@ struct Sidebar: View {
     var body: some View {
         VStack(spacing: 0) {
             // Kept below the title bar: on newer macOS it takes clicks meant for controls under it.
-            HStack(spacing: 14) {
+            HStack(spacing: 2) {
                 Spacer()
                 Button { store.newTab() } label: { Image(systemName: "plus") }
                     .help("New session in current project (⌘T)")
+                    .accessibilityLabel("New session")
                 Button { store.openFolderPanel() } label: { Image(systemName: "folder.badge.plus") }
                     .help("Open folder as a project (⌘O)")
+                    .accessibilityLabel("Open folder as a project")
                 Button { store.showRecentSessions = true } label: { Image(systemName: "clock.arrow.circlepath") }
                     .help("Open recent Claude session (⇧⌘O)")
+                    .accessibilityLabel("Recent Claude conversations")
+                    .disabled(store.isSheetOpen)
                 SettingsLink { Image(systemName: "gearshape") }
                     .help("Settings (⌘,)")
+                    .accessibilityLabel("Settings")
             }
-            .buttonStyle(.plain)
+            .buttonStyle(IconButtonStyle())
             .foregroundStyle(.secondary)
-            .padding(.trailing, 12)
+            .padding(.trailing, 8)
             .frame(height: 28)
 
             if store.attentionCount > 0 {
                 Button { store.selectNextNeedingYou() } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "bell.fill")
+                        Image(systemName: "bell.fill").foregroundStyle(.orange)
                         Text("\(store.attentionCount) session\(store.attentionCount == 1 ? " needs" : "s need") you")
                         Spacer()
-                        Text("⌘J").font(.caption.monospaced()).opacity(0.7)
+                        Text("⌘J").font(.caption.monospaced()).foregroundStyle(.secondary)
                     }
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.primary)
                     .padding(.horizontal, 10)
                     .frame(height: 24)
                     .background(.orange.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
@@ -160,7 +165,7 @@ struct TabRow: View {
                         .lineLimit(1)
                 }
                 if rt.awaitsPermission {
-                    PermissionButtons(tabID: tab.id).padding(.top, 3)
+                    PermissionButtons(tabID: tab.id).controlSize(.small).padding(.top, 3)
                 }
                 if pulls.requests[tab.id]?.state == .merged {
                     Button("Delete Worktree") { store.cleanUpMergedWorktree(tab.id) }
@@ -175,10 +180,14 @@ struct TabRow: View {
             if hovering {
                 if rt.busy {
                     Button { store.stop(tab.id) } label: { Image(systemName: "stop.fill") }
+                        .buttonStyle(IconButtonStyle())
                         .help("Interrupt (Ctrl-C)")
+                        .accessibilityLabel("Interrupt \(tab.name)")
                 } else {
                     Button { store.start(tab.id) } label: { Image(systemName: "play.fill") }
+                        .buttonStyle(IconButtonStyle())
                         .help("Continue this Claude conversation")
+                        .accessibilityLabel("Continue \(tab.name)")
                 }
             } else if rt.needsAttention {
                 Image(systemName: "bell.fill").font(.caption).foregroundStyle(.orange)
@@ -216,7 +225,8 @@ struct RecentSection: View {
     @AppStorage(Prefs.recentCollapsed) private var collapsed = false
 
     var body: some View {
-        let recents = Array(store.closedRecentSessions.prefix(6))
+        // Few rows, so the session list above keeps its room in a short window.
+        let recents = Array(store.closedRecentSessions.prefix(3))
         if !recents.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 Rectangle().fill(.primary.opacity(0.08)).frame(height: 1)
@@ -300,21 +310,27 @@ struct GroupHeader: View {
             // Show/hide chevron on hover, then the + at the trailing edge.
             Button { store.updateGroup(group.id) { $0.isCollapsed.toggle() } } label: {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 7, weight: .bold))
+                    .font(.system(size: 8, weight: .bold))
                     .rotationEffect(.degrees(group.isCollapsed ? 0 : 90))
-                    .frame(width: 10, height: 10)
+                    .frame(width: 18, height: 18)
+                    .contentShape(Rectangle())
             }
             .opacity(hovering || group.isCollapsed ? 1 : 0)
+            // Invisible until hovered, so don't let it catch stray clicks either.
+            .allowsHitTesting(hovering || group.isCollapsed)
             .help(group.isCollapsed ? "Show sessions" : "Hide sessions")
+            .accessibilityLabel(group.isCollapsed ? "Show sessions in \(group.name)" : "Hide sessions in \(group.name)")
             Button { store.newTab(in: group.id) } label: {
                 Image(systemName: "plus")
-                    .font(.system(size: 8, weight: .semibold))
-                    .frame(width: 10, height: 10)
+                    .font(.system(size: 9, weight: .semibold))
+                    .frame(width: 18, height: 18)
+                    .contentShape(Rectangle())
             }
             .help("New session in \(group.name)")
+            .accessibilityLabel("New session in \(group.name)")
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.tertiary)
+        .foregroundStyle(.secondary)
         .padding(.top, 6)
         .contentShape(Rectangle())
         .onHover { hovering = $0 }

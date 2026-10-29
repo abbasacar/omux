@@ -51,9 +51,12 @@ struct BroadcastSheet: View {
             HStack {
                 Toggle("Press Return after sending", isOn: $submit)
                 Spacer()
+                Text("⌘↩ to send").font(.caption).foregroundStyle(.secondary)
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
                 Button("Send to \(targets.count)") { send() }
                     .keyboardShortcut(.return, modifiers: .command)
+                    .buttonStyle(.borderedProminent)
+                    .help("⌘↩")
                     .disabled(targets.isEmpty || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }

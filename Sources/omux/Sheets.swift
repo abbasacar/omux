@@ -7,6 +7,7 @@ struct QuickSwitcher: View {
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
     @State private var selection = 0
+    @State private var keyMonitor: Any?
     @FocusState private var focused: Bool
 
     private struct Item: Identifiable {
@@ -60,7 +61,7 @@ struct QuickSwitcher: View {
             Item(id: "interrupt", title: "Interrupt (Ctrl-C)", shortcut: "⇧⌘.", icon: "stop") { if let id { store.stop(id) } },
             Item(id: "edit", title: "Edit Session…", shortcut: "⌘I", icon: "slider.horizontal.3") { store.editingTabID = id },
             Item(id: "close", title: "Close Session", shortcut: "⌘W", icon: "xmark") { if let id { store.requestClose(id) } },
-            Item(id: "bigger", title: "Bigger Font", shortcut: "⌘+", icon: "textformat.size.larger") { store.zoomFont(1) },
+            Item(id: "bigger", title: "Bigger Font", shortcut: "⌘=", icon: "textformat.size.larger") { store.zoomFont(1) },
             Item(id: "smaller", title: "Smaller Font", shortcut: "⌘−", icon: "textformat.size.smaller") { store.zoomFont(-1) },
         ] + Theme.allCases.map { theme in
             Item(id: "theme-\(theme.rawValue)", title: "Theme: \(theme.label)", icon: "paintpalette") {
@@ -118,30 +119,45 @@ struct QuickSwitcher: View {
                     .font(.title3)
                     .focused($focused)
                     .onSubmit { pick(list) }
-                    .onKeyPress(.downArrow) { move(1, count: list.count); return .handled }
-                    .onKeyPress(.upArrow) { move(-1, count: list.count); return .handled }
             }
             .padding(12)
             Divider()
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(Array(list.enumerated()), id: \.element.id) { index, item in
-                            row(item, selected: index == selection)
-                                .id(index)
-                                .onTapGesture { selection = index; pick(list) }
-                        }
-                    }
-                    .padding(6)
-                }
-                .onChange(of: selection) { _, value in proxy.scrollTo(value) }
-            }
             if list.isEmpty {
-                Text("No matches").foregroundStyle(.secondary).frame(maxHeight: .infinity)
+                Text("No matches").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(list.enumerated()), id: \.element.id) { index, item in
+                                row(item, selected: index == selection)
+                                    .id(index)
+                                    .onHover { if $0 { selection = index } }
+                                    .onTapGesture { selection = index; pick(list) }
+                            }
+                        }
+                        .padding(6)
+                    }
+                    .onChange(of: selection) { _, value in proxy.scrollTo(value) }
+                }
             }
         }
         .frame(width: 520, height: 400)
-        .onAppear { focused = true }
+        .onAppear {
+            focused = true
+            // ↑/↓ move the highlight. The search field's editor would take them as cursor
+            // moves before SwiftUI saw them, so catch them on the way in.
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                switch event.keyCode {
+                case 125: move(1, count: items.count); return nil
+                case 126: move(-1, count: items.count); return nil
+                default: return event
+                }
+            }
+        }
+        .onDisappear {
+            if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+            keyMonitor = nil
+        }
         .onChange(of: query) { _, _ in selection = 0 }
         .onExitCommand { dismiss() }
     }
@@ -175,10 +191,9 @@ struct QuickSwitcher: View {
 
     private func pick(_ list: [Item]) {
         guard list.indices.contains(selection) else { return }
-        let item = list[selection]
+        // Runs once the sheet has closed, so commands that open another sheet can.
+        store.pendingPaletteAction = list[selection].run
         dismiss()
-        // After the sheet closes, so commands that open another sheet can.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { item.run() }
     }
 }
 

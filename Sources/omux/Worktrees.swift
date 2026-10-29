@@ -32,10 +32,20 @@ extension Store {
         }
     }
 
-    /// ⌘W: a worktree session asks whether to keep its worktree; others close at once.
+    /// ⌘W: a worktree session asks whether to keep its worktree; others close at once,
+    /// unless a program (like claude) is still running in them.
     func requestClose(_ id: UUID) {
         guard let tab = tab(id), let worktree = tab.worktree, let path = directory(of: tab),
               FileManager.default.fileExists(atPath: path) else {
+            refreshBusy(id)
+            if runtime[id]?.busy == true, let tab = self.tab(id) {
+                let alert = NSAlert()
+                alert.messageText = "Close “\(tab.name)”?"
+                alert.informativeText = "Something is still running in it. A Claude conversation can be reopened later from Recent in the sidebar."
+                alert.addButton(withTitle: "Close")
+                alert.addButton(withTitle: "Cancel")
+                guard alert.runModal() == .alertFirstButtonReturn else { return }
+            }
             closeTab(id)
             return
         }
@@ -324,6 +334,5 @@ struct PermissionButtons: View {
             Button("Deny") { store.answerPermission(tabID, allow: false) }
                 .buttonStyle(.bordered)
         }
-        .controlSize(.small)
     }
 }

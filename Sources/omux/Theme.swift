@@ -55,7 +55,7 @@ enum Theme: String, CaseIterable, Identifiable {
 
     /// 16 ANSI colours (normal 0-7, bright 8-15).
     var palette: [SwiftTerm.Color] {
-        let hex: [UInt32]
+        var hex: [UInt32]
         switch self {
         case .midnight:
             hex = [0x484F58, 0xFF7B72, 0x3FB950, 0xD29922, 0x58A6FF, 0xBC8CFF, 0x39C5CF, 0xB1BAC4,
@@ -94,6 +94,14 @@ enum Theme: String, CaseIterable, Identifiable {
             hex = [0x000000, 0xCD3131, 0x0DBC79, 0xE5E510, 0x2472C8, 0xBC3FBC, 0x11A8CD, 0xE5E5E5,
                    0x666666, 0xF14C4C, 0x23D18B, 0xF5F543, 0x3B8EEA, 0xD670D6, 0x29B8DB, 0xFFFFFF]
         }
+        // "White" and "bright white" are near the background on light themes, so text
+        // a program prints in them would vanish; use readable grays instead.
+        switch self {
+        case .light: hex[7] = 0x6E6E6E; hex[15] = 0x3A3A3A
+        case .solarizedLight: hex[7] = 0x657B83; hex[15] = 0x073642
+        case .catppuccinLatte: hex[7] = 0x6C6F85; hex[15] = 0x4C4F69
+        default: break
+        }
         return hex.map { v in
             SwiftTerm.Color(red: UInt16((v >> 16) & 0xFF) * 257,
                             green: UInt16((v >> 8) & 0xFF) * 257,
@@ -124,5 +132,30 @@ enum Fonts {
         let size = stored > 0 ? stored : 13
         return (family.isEmpty ? nil : NSFont(name: family, size: size))
             ?? NSFont.monospacedSystemFont(ofSize: size, weight: .regular)
+    }
+}
+
+/// Small icon buttons with a comfortable hit area and a hover highlight.
+struct IconButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        IconButtonBody(configuration: configuration)
+    }
+
+    private struct IconButtonBody: View {
+        let configuration: ButtonStyleConfiguration
+        @State private var hovering = false
+        @Environment(\.isEnabled) private var isEnabled
+
+        var body: some View {
+            configuration.label
+                .frame(width: 24, height: 22)
+                .contentShape(Rectangle())
+                .background(
+                    Color.primary.opacity(configuration.isPressed ? 0.16 : hovering && isEnabled ? 0.08 : 0),
+                    in: RoundedRectangle(cornerRadius: 5)
+                )
+                .opacity(isEnabled ? 1 : 0.4)
+                .onHover { hovering = $0 }
+        }
     }
 }

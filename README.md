@@ -21,9 +21,10 @@ Version 0.4.0, on top of the original's 0.3.0:
 - **Needs-you triage.** A sidebar banner counts sessions waiting on you; ⌘J jumps to the next one.
 - **Menu bar status.** A menu bar icon lists every session with its status and shows a count while sessions need you. Turn it off in Settings › Menu Bar.
 - **Session colors you can see.** A session's color shows as a bar and a tint on its row in the sidebar, instead of only tinting the status dot when Claude has no status.
-- **Font zoom** (⌘+ / ⌘− / ⌘0) and four more themes: Catppuccin Mocha, Catppuccin Latte, Tokyo Night and Rosé Pine.
+- **Font zoom** (⌘= / ⌘− / ⌘0) and four more themes: Catppuccin Mocha, Catppuccin Latte, Tokyo Night and Rosé Pine.
 - **`omux` command and `install.sh`.** `omux .` opens the current folder from any terminal.
-- **Fix:** buttons at the top of the sidebar, the session header and the right panel's tabs didn't respond to clicks on newer macOS, where the title bar took the click.
+- **Safer ⌘W.** It asks before closing a session that still has something running, and in Settings it closes Settings instead of a session. ⌘R no longer renames, so it's free for the terminal.
+- **Fixes:** buttons at the top of the window didn't respond to clicks on newer macOS, where the title bar took the click. Plus a UI pass: bigger click targets and VoiceOver labels on icon buttons, a header that drops chips instead of buttons when narrow, readable white text on light themes, and palette and grid fixes.
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 
@@ -82,7 +83,7 @@ open /Applications/omux.app
 | New session in a worktree | ⌥⌘T |
 | Open folder / recent Claude conversation | ⌘O / ⇧⌘O |
 | Close session | ⌘W |
-| Rename / edit session | ⌘R / ⌘I |
+| Edit session (rename from its right-click menu) | ⌘I |
 | Restart session | ⇧⌘R |
 | Interrupt (Ctrl-C) | ⇧⌘. |
 | Continue Claude conversation | ⇧⌘↩ |
@@ -90,7 +91,7 @@ open /Applications/omux.app
 | Next session needing you | ⌘J |
 | Grid view | ⇧⌘G |
 | Broadcast to sessions | ⇧⌘B |
-| Bigger / smaller / actual font size | ⌘+ / ⌘− / ⌘0 |
+| Bigger / smaller / actual font size | ⌘= / ⌘− / ⌘0 |
 | Next / previous session | ⇧⌘] / ⇧⌘[ |
 | Session 1–9 in the current project | ⌘1 … ⌘9 |
 | Right panel / Files / Changes / Browser | ⌥⌘F / ⌥⌘1 / ⌥⌘2 / ⌥⌘3 |

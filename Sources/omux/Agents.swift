@@ -577,7 +577,7 @@ struct AgentTranscriptView: View {
                     }
                 }
                 if live?.blocked == true, store.runtime[ref.tabID]?.awaitsPermission == true {
-                    PermissionButtons(tabID: ref.tabID)
+                    PermissionButtons(tabID: ref.tabID).controlSize(.small)
                 }
                 Button { store.openAgent = nil } label: { Image(systemName: "xmark") }
                     .help("Close transcript")

@@ -13,7 +13,7 @@ First release of this fork ([abbasacar/omux](https://github.com/abbasacar/omux))
 - **Command palette** (⌘K): the quick switcher also runs commands, with fuzzy matching and ↑/↓ navigation. Start with `>` to search only commands.
 - **Next session needing you** (⌘J), and a sidebar banner counting sessions waiting on you.
 - **Menu bar status item** listing every session and its state, with a count while sessions need you.
-- **Font zoom** (⌘+ / ⌘− / ⌘0).
+- **Font zoom** (⌘= / ⌘− / ⌘0).
 - **Themes:** Catppuccin Mocha, Catppuccin Latte, Tokyo Night and Rosé Pine.
 - **`omux` command and `install.sh`**: `omux .` opens the current folder in omux.
 - **Recent conversations in the sidebar.** The last few Claude conversations that aren't open, one click from reopening, with Show All for the rest. The command palette finds old conversations too.
@@ -21,8 +21,23 @@ First release of this fork ([abbasacar/omux](https://github.com/abbasacar/omux))
 
 - A session's color shows as a bar and a tint on its row in the sidebar, so the status dot no longer hides it. The Color menu shows swatches and checks the current color.
 
+### Changed
+
+- ⌘W asks before closing a session that still has something running, and closes the Settings window instead of a session when Settings is in front.
+- ⌘R no longer renames a session (it's left to the terminal); rename from the session's right-click menu or Edit Session (⌘I). ⌘1–9 are labelled "Session n in Project", which is what they always did.
+
 ### Fixed
 
+- Grid: tiles keep a minimum size and the grid scrolls when there are more sessions than fit; a single click on a tile's header selects it without waiting for a double click; a hint explains a grid with only one running session.
+- Command palette: ↑/↓ move the highlight; commands that open another window (Broadcast, Edit Session, Open Recent) open it; the mouse highlights rows. Commands that open a window are disabled while another one is open.
+- Clicking a session in the sidebar no longer risks selecting the terminal you were typing in again.
+- A new project's name field no longer loses focus to its terminal.
+- The session header hides its chips and folder before its buttons when the window is narrow.
+- "Next Session Needing You" in the menu bar brings back a closed window.
+- Icon buttons have bigger click targets, a hover highlight and VoiceOver labels.
+- Light themes: the terminal's white and bright white are readable grays; the needs-you banner and project names are easier to read.
+- The Recent section shows 3 conversations, so the session list keeps its room in a short window.
+- Broadcast's Send button is the default button and shows its ⌘↩ shortcut.
 - Buttons at the top of the sidebar, the session header and the right panel's tabs didn't respond to clicks on newer macOS, where the title bar took the click. They now sit below it.
 
 ## [0.3.0] - 2026-10-29

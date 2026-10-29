@@ -40,6 +40,10 @@ final class Store: ObservableObject {
     @Published var showQuickSwitcher = false
     @Published var showRecentSessions = false
     @Published var showBroadcast = false
+    /// A command picked in the palette, run once the palette has closed so it can open its own sheet.
+    var pendingPaletteAction: (() -> Void)?
+    /// The window sessions live in; ⌘W closes a session only there.
+    weak var mainWindow: NSWindow?
     /// Claude conversations in ~/.claude/projects, newest first.
     @Published private(set) var recentSessions: [RecentSession] = []
     /// The first scan of recent conversations has finished.
@@ -94,10 +98,13 @@ final class Store: ObservableObject {
         }
 
         // A click into a terminal (a grid tile) selects its session. SwiftTerm doesn't let
-        // us override its focus methods, so check who has focus once the click lands.
+        // us override its focus methods, so look at what's under the click. Clicks anywhere
+        // else (the sidebar) are left alone so they can't select the old session again.
         NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { event in
-            DispatchQueue.main.async {
-                (event.window?.firstResponder as? TermView)?.emit(.focused)
+            var view = event.window?.contentView?.hitTest(event.locationInWindow)
+            while let current = view, !(current is TermView) { view = current.superview }
+            if let term = view as? TermView {
+                DispatchQueue.main.async { term.emit(.focused) }
             }
             return event
         }
@@ -149,7 +156,8 @@ final class Store: ObservableObject {
     func terminal(for tabID: UUID) -> TermView? {
         if let view = terminals[tabID] { return view }
         guard let loc = location(of: tabID) else { return nil }
-        return makeTerminal(tab: groups[loc.group].tabs[loc.tab], group: groups[loc.group], command: "")
+        // Called while a view draws, so its status change waits for the next turn.
+        return makeTerminal(tab: groups[loc.group].tabs[loc.tab], group: groups[loc.group], command: "", deferStatus: true)
     }
 
     private func startAllSessions() {
@@ -167,7 +175,7 @@ final class Store: ObservableObject {
     }
 
     @discardableResult
-    private func makeTerminal(tab: TabItem, group: TabGroup, command: String? = nil) -> TermView {
+    private func makeTerminal(tab: TabItem, group: TabGroup, command: String? = nil, deferStatus: Bool = false) -> TermView {
         let view = TermView(tabID: tab.id)
         terminals[tab.id] = view
         // A replaced view (restart) still reports its exit; only the current one may update the tab.
@@ -175,11 +183,11 @@ final class Store: ObservableObject {
             guard let self, let view, self.terminals[tab.id] === view else { return }
             self.handle(event, for: tab.id)
         }
-        launch(view, tab: tab, group: group, command: command)
+        launch(view, tab: tab, group: group, command: command, deferStatus: deferStatus)
         return view
     }
 
-    private func launch(_ view: TermView, tab: TabItem, group: TabGroup, command: String?) {
+    private func launch(_ view: TermView, tab: TabItem, group: TabGroup, command: String?, deferStatus: Bool = false) {
         let home = NSHomeDirectory()
         var dir = ((tab.directory ?? group.directory) as NSString?)?.expandingTildeInPath ?? home
         var isDir: ObjCBool = false
@@ -210,10 +218,13 @@ final class Store: ObservableObject {
             execName: "-" + (shell as NSString).lastPathComponent,
             currentDirectory: dir
         )
-        update(tab.id) {
-            $0.exited = false; $0.cwd = dir; $0.title = ""
-            $0.statusState = nil; $0.statusKind = nil; $0.statusDetail = nil; $0.statusChildren = []
+        let started: () -> Void = { [weak self] in
+            self?.update(tab.id) {
+                $0.exited = false; $0.cwd = dir; $0.title = ""
+                $0.statusState = nil; $0.statusKind = nil; $0.statusDetail = nil; $0.statusChildren = []
+            }
         }
+        if deferStatus { DispatchQueue.main.async { started() } } else { started() }
 
         if let command = command ?? startupCommand(tab: tab, group: group), !command.isEmpty {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -697,6 +708,18 @@ final class Store: ObservableObject {
 
     var attentionCount: Int { runtime.values.filter(\.needsAttention).count }
 
+    /// A sheet is up; commands that open another one wait, since SwiftUI would drop it.
+    var isSheetOpen: Bool {
+        showQuickSwitcher || showRecentSessions || showBroadcast
+            || editingTabID != nil || editingGroupID != nil || newWorktreeGroupID != nil
+    }
+
+    func runPendingPaletteAction() {
+        let action = pendingPaletteAction
+        pendingPaletteAction = nil
+        action?()
+    }
+
     /// Cycles through sessions waiting on you: blocked on a prompt first, then flagged ones.
     func selectNextNeedingYou() {
         let ids = allTabs.map(\.tab.id)
@@ -704,7 +727,8 @@ final class Store: ObservableObject {
         guard !waiting.isEmpty else { NSSound.beep(); return }
         let start = selectedTabID.flatMap(ids.firstIndex(of:)) ?? -1
         let next = waiting.first { ids.firstIndex(of: $0)! > start } ?? waiting[0]
-        selectedTabID = next
+        // Brings the window back too, e.g. when picked from the menu bar with it closed.
+        reveal(next)
     }
 
     /// Steps the terminal font size; 0 resets it.
