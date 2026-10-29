@@ -20,7 +20,7 @@ Version 0.4.0, on top of the original's 0.3.0:
 - **Recent conversations in the sidebar.** Your latest Claude conversations that aren't open, one click from reopening, with Show All for the rest. Conversations are labelled with the title Claude Code gives them instead of the first words of the first prompt.
 - **Needs-you triage.** A sidebar banner counts sessions waiting on you; ⌘J jumps to the next one.
 - **Menu bar status.** A menu bar icon lists every session with its status and shows a count while sessions need you. Turn it off in Settings › Menu Bar.
-- **Session colors you can see.** A session's color shows as a bar on its edge in the sidebar, the grid and the header, instead of only tinting the status dot when Claude has no status.
+- **Session colors you can see.** A session's color shows as a bar and a tint on its row in the sidebar, instead of only tinting the status dot when Claude has no status.
 - **Font zoom** (⌘+ / ⌘− / ⌘0) and four more themes: Catppuccin Mocha, Catppuccin Latte, Tokyo Night and Rosé Pine.
 - **`omux` command and `install.sh`.** `omux .` opens the current folder from any terminal.
 - **Fix:** buttons at the top of the sidebar, the session header and the right panel's tabs didn't respond to clicks on newer macOS, where the title bar took the click.

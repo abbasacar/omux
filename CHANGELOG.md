@@ -19,7 +19,7 @@ First release of this fork ([abbasacar/omux](https://github.com/abbasacar/omux))
 - **Recent conversations in the sidebar.** The last few Claude conversations that aren't open, one click from reopening, with Show All for the rest. The command palette finds old conversations too.
 - Conversations are labelled with the title Claude Code gives them instead of the first words of the first prompt.
 
-- A session's color shows as a bar on its edge in the sidebar, the grid and the header, so the status dot no longer hides it. The Color menu shows swatches and checks the current color.
+- A session's color shows as a bar and a tint on its row in the sidebar, so the status dot no longer hides it. The Color menu shows swatches and checks the current color.
 
 ### Fixed
 

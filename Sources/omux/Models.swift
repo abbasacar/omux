@@ -48,24 +48,6 @@ enum TabColor: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-extension View {
-    /// The session's own color as a bar on the leading edge, apart from the status dot.
-    @ViewBuilder
-    func sessionColorBar(_ color: TabColor, inset: CGFloat = 0) -> some View {
-        if let tint = color.color {
-            overlay(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 1.5)
-                    .fill(tint)
-                    .frame(width: 3)
-                    .padding(.vertical, inset)
-                    .allowsHitTesting(false)
-            }
-        } else {
-            self
-        }
-    }
-}
-
 struct TabItem: Identifiable, Codable, Hashable {
     var id = UUID()
     var name: String

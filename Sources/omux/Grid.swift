@@ -63,7 +63,6 @@ struct SessionGrid: View {
                 .padding(.horizontal, 8)
                 .frame(height: 22)
                 .background(Color(nsColor: theme.chrome))
-                .sessionColorBar(tab.color)
                 .contentShape(Rectangle())
                 .onTapGesture(count: 2) { store.selectedTabID = id; gridMode = false }
                 .onTapGesture { store.selectedTabID = id; term.window?.makeFirstResponder(term) }
