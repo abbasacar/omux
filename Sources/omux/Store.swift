@@ -2,9 +2,16 @@ import AppKit
 import Combine
 import SwiftUI
 
+// `@retroactive` silences a Swift 6 warning; older compilers don't know it.
+#if compiler(>=6)
 extension UUID: @retroactive Identifiable {
     public var id: UUID { self }
 }
+#else
+extension UUID: Identifiable {
+    public var id: UUID { self }
+}
+#endif
 
 @MainActor
 final class Store: ObservableObject {
