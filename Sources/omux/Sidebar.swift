@@ -17,6 +17,7 @@ enum SidebarRow: Identifiable, Hashable {
 struct Sidebar: View {
     @EnvironmentObject var store: Store
     let theme: Theme
+    private var needsYou: Color { theme.statusColor(.blocked) ?? .orange }
 
     /// Projects followed by their sessions (hidden while collapsed). A flat list lets
     /// native drag reorder projects and move sessions between them.
@@ -53,7 +54,7 @@ struct Sidebar: View {
             if store.attentionCount > 0 {
                 Button { store.selectNextNeedingYou() } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "bell.fill").foregroundStyle(.orange)
+                        Image(systemName: "bell.fill").foregroundStyle(needsYou)
                         Text("\(store.attentionCount) session\(store.attentionCount == 1 ? " needs" : "s need") you")
                         Spacer()
                         Text("⌘J").font(.caption.monospaced()).foregroundStyle(.secondary)
@@ -62,7 +63,7 @@ struct Sidebar: View {
                     .foregroundStyle(.primary)
                     .padding(.horizontal, 10)
                     .frame(height: 24)
-                    .background(.orange.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
+                    .background(needsYou.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -124,6 +125,7 @@ struct TabRow: View {
     let tab: TabItem
     @State private var hovering = false
     @AppStorage(Prefs.showFolderPath) private var showFolderPath = true
+    @Environment(\.omuxTheme) private var theme
 
     /// "2 agents" while subagents run; the selected session lists them instead.
     private var agentCount: String? {
@@ -136,9 +138,7 @@ struct TabRow: View {
         let rt = store.runtime[tab.id] ?? TabRuntime()
         // Top-aligned so the dot stays beside the name when agent rows or buttons follow.
         HStack(alignment: .top, spacing: 8) {
-            Circle()
-                .fill(rt.statusColor ?? tab.color.color ?? Color.secondary.opacity(0.35))
-                .frame(width: 8, height: 8)
+            StatusDot(runtime: rt)
                 .padding(.top, 5)
             VStack(alignment: .leading, spacing: 1) {
                 if store.renamingID == tab.id {
@@ -190,26 +190,26 @@ struct TabRow: View {
                         .accessibilityLabel("Continue \(tab.name)")
                 }
             } else if rt.needsAttention {
-                Image(systemName: "bell.fill").font(.caption).foregroundStyle(.orange)
+                Image(systemName: "bell.fill").font(.caption).foregroundStyle(theme.statusColor(.blocked) ?? .orange)
             } else if rt.hasActivity {
-                Circle().fill(.blue).frame(width: 6, height: 6)
+                Circle().fill(theme.accent).frame(width: 6, height: 6)
             }
         }
         .buttonStyle(.plain)
-        .opacity(rt.exited && !hovering ? 0.55 : 1)
         .padding(.vertical, 2)
         // The color you picked, kept apart from the status dot so it always shows.
-        .background(alignment: .leading) {
+        .background {
             if let tint = tab.color.color {
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(tint.opacity(0.13))
-                    .padding(.leading, -8)
-                    .padding(.trailing, -4)
-                RoundedRectangle(cornerRadius: 1.5)
-                    .fill(tint)
-                    .frame(width: 3)
-                    .padding(.vertical, 3)
-                    .offset(x: -8)
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(tint.opacity(0.13))
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(tint)
+                        .frame(width: 3)
+                        .padding(.vertical, 4)
+                }
+                .padding(.leading, -8)
+                .padding(.trailing, -4)
             }
         }
         .onHover { over in
@@ -223,10 +223,15 @@ struct TabRow: View {
 struct RecentSection: View {
     @EnvironmentObject var store: Store
     @AppStorage(Prefs.recentCollapsed) private var collapsed = false
+    @AppStorage(Prefs.recentExpanded) private var expanded = false
+
+    /// Three rows by default so the session list keeps its room; more on request, scrolling.
+    private static let shortCount = 3
+    private static let longCount = 12
 
     var body: some View {
-        // Few rows, so the session list above keeps its room in a short window.
-        let recents = Array(store.closedRecentSessions.prefix(3))
+        let all = store.closedRecentSessions
+        let recents = Array(all.prefix(expanded ? Self.longCount : Self.shortCount))
         if !recents.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 Rectangle().fill(.primary.opacity(0.08)).frame(height: 1)
@@ -251,8 +256,33 @@ struct RecentSection: View {
                 .padding(.horizontal, 12)
                 .frame(height: 26)
                 if !collapsed {
-                    ForEach(recents) { RecentRow(session: $0) }
-                        .padding(.bottom, 2)
+                    if expanded {
+                        ScrollView {
+                            VStack(spacing: 0) { ForEach(recents) { RecentRow(session: $0) } }
+                        }
+                        .frame(maxHeight: 300)
+                    } else {
+                        ForEach(recents) { RecentRow(session: $0) }
+                    }
+                    if all.count > Self.shortCount {
+                        Button {
+                            withAnimation(.snappy(duration: 0.2)) { expanded.toggle() }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                                    .font(.system(size: 8, weight: .bold))
+                                Text(expanded ? "Show less" : "Show \(min(all.count, Self.longCount) - Self.shortCount) more")
+                                Spacer()
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 18)
+                            .frame(height: 22)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help(expanded ? "Show fewer recent conversations" : "Show more recent conversations here")
+                    }
                 }
             }
         }

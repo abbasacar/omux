@@ -8,6 +8,7 @@ struct QuickSwitcher: View {
     @State private var query = ""
     @State private var selection = 0
     @State private var keyMonitor: Any?
+    @Environment(\.omuxTheme) private var theme
     @FocusState private var focused: Bool
 
     private struct Item: Identifiable {
@@ -25,7 +26,7 @@ struct QuickSwitcher: View {
             let rt = store.runtime[entry.tab.id]
             return Item(id: entry.tab.id.uuidString, title: entry.tab.name,
                         detail: [entry.group.name, rt?.statusLine()].compactMap { $0 }.joined(separator: " · "),
-                        dot: rt?.statusColor ?? entry.tab.color.color ?? Color.secondary.opacity(0.35)) {
+                        dot: theme.statusColor(rt?.statusState) ?? Color.secondary.opacity(0.4)) {
                 store.selectedTabID = entry.tab.id
             }
         }
@@ -180,7 +181,7 @@ struct QuickSwitcher: View {
         }
         .padding(.horizontal, 8)
         .frame(height: 28)
-        .background(selected ? Color.accentColor.opacity(0.22) : .clear, in: RoundedRectangle(cornerRadius: 6))
+        .background(selected ? theme.accent.opacity(0.22) : .clear, in: RoundedRectangle(cornerRadius: 6))
         .contentShape(Rectangle())
     }
 

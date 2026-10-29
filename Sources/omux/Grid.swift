@@ -6,12 +6,39 @@ struct SessionGrid: View {
     @EnvironmentObject var store: Store
     let theme: Theme
     @AppStorage(Prefs.gridMode) private var gridMode = false
+    @Environment(\.omuxTheme) private var themeColors
 
     /// Smaller than this, Claude Code's screen wraps into a mess; past it the grid scrolls.
     static let minTile = CGSize(width: 320, height: 170)
 
     var body: some View {
         let ids = store.gridTabIDs
+        if ids.count <= 1, let id = ids.first, let term = store.terminal(for: id) {
+            // One session: show it as usual, with a note instead of a lone tile.
+            VStack(spacing: 0) {
+                HStack(spacing: 6) {
+                    Image(systemName: "square.grid.2x2")
+                    Text("Grid view shows every running session in this project. Only one is running; ⌘T starts another.")
+                        .lineLimit(1)
+                    Spacer()
+                    Button("Exit Grid") { gridMode = false }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.tint)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 10)
+                .frame(height: 24)
+                .background(Color(nsColor: theme.chrome))
+                .overlay(alignment: .bottom) { Rectangle().fill(.primary.opacity(0.08)).frame(height: 1) }
+                TerminalHost(termView: term, theme: theme, focus: store.renamingID == nil)
+            }
+        } else {
+            grid(ids)
+        }
+    }
+
+    private func grid(_ ids: [UUID]) -> some View {
         GeometryReader { geo in
             let (columns, rows) = Self.layout(count: ids.count, in: geo.size)
             let tileHeight = max(geo.size.height / CGFloat(rows), Self.minTile.height)
@@ -35,17 +62,6 @@ struct SessionGrid: View {
             .scrollDisabled(tileHeight * CGFloat(rows) <= geo.size.height + 1)
             .background(Color.primary.opacity(0.12))
         }
-        .overlay(alignment: .bottom) {
-            if ids.count == 1 {
-                Text("Only one session is running in this project. Start more with ⌘T to see them side by side.")
-                    .font(.caption)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(12)
-                    .allowsHitTesting(false)
-            }
-        }
     }
 
     @ViewBuilder
@@ -55,9 +71,7 @@ struct SessionGrid: View {
             let selected = store.selectedTabID == id
             VStack(spacing: 0) {
                 HStack(spacing: 6) {
-                    Circle()
-                        .fill(rt.statusColor ?? tab.color.color ?? Color.secondary.opacity(0.4))
-                        .frame(width: 7, height: 7)
+                    StatusDot(runtime: rt, size: 7)
                     Text(tab.name)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(selected ? .primary : .secondary)
@@ -69,7 +83,7 @@ struct SessionGrid: View {
                     if rt.awaitsPermission {
                         PermissionButtons(tabID: id).controlSize(.mini).fixedSize()
                     } else if rt.needsAttention {
-                        Image(systemName: "bell.fill").font(.caption2).foregroundStyle(.orange)
+                        Image(systemName: "bell.fill").font(.caption2).foregroundStyle(themeColors.statusColor(.blocked) ?? .orange)
                     }
                     Button {
                         store.selectedTabID = id
@@ -96,7 +110,8 @@ struct SessionGrid: View {
             }
             .overlay {
                 Rectangle()
-                    .strokeBorder(selected ? Color.accentColor.opacity(0.8) : rt.statusState == .blocked ? .orange.opacity(0.7) : .clear,
+                    .strokeBorder(selected ? themeColors.accent.opacity(0.8)
+                                    : rt.statusState == .blocked ? (themeColors.statusColor(.blocked) ?? .orange).opacity(0.7) : .clear,
                                   lineWidth: selected ? 1.5 : 1)
                     .allowsHitTesting(false)
             }

@@ -96,6 +96,7 @@ enum Prefs {
     static let gridMode = "gridMode"
     static let showMenuBar = "showMenuBar"
     static let recentCollapsed = "recentCollapsed"
+    static let recentExpanded = "recentExpanded"
 }
 
 struct SettingsView: View {
@@ -219,6 +220,8 @@ struct ContentView: View {
         // Hiding the toolbar itself also hides the window buttons on some macOS versions.
         .toolbarBackground(.hidden, for: .windowToolbar)
         .preferredColorScheme(theme.colorScheme)
+        .environment(\.omuxTheme, theme)
+        .tint(theme.accent)
         .background(Color(nsColor: theme.chrome))
         .onChange(of: themeName) { _, _ in store.applyAppearance() }
         .onChange(of: fontFamily) { _, _ in store.applyAppearance() }
@@ -252,9 +255,7 @@ struct SessionHeader: View {
         HStack(spacing: 8) {
             if let tab = store.selectedTab {
                 let rt = store.runtime[tab.id] ?? TabRuntime()
-                Circle()
-                    .fill(rt.statusColor ?? tab.color.color ?? Color.secondary.opacity(0.4))
-                    .frame(width: 8, height: 8)
+                StatusDot(runtime: rt)
                 Text(tab.name)
                     .font(.system(size: 11, weight: .semibold))
                     .lineLimit(1)
@@ -326,7 +327,7 @@ struct SessionHeader: View {
             } else if folder, let cwd = rt.cwd {
                 Text((cwd as NSString).abbreviatingWithTildeInPath)
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.head)
                     .frame(maxWidth: 260)
@@ -453,6 +454,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.servicesProvider = services
         NSUpdateDynamicServices()
         Notifier.shared.activate()
+        DebugHooks.install()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }

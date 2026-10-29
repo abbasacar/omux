@@ -166,16 +166,6 @@ struct TabRuntime: Equatable {
         if showFolder, let cwd { return (cwd as NSString).abbreviatingWithTildeInPath }
         return nil
     }
-
-    var statusColor: Color? {
-        switch statusState {
-        case .blocked: return .orange
-        case .working: return .blue
-        case .done: return .green
-        case .error: return .red
-        default: return nil
-        }
-    }
 }
 
 enum Persistence {

@@ -2,6 +2,9 @@ import AppKit
 import SwiftTerm
 import SwiftUI
 
+/// SwiftTerm has a Color too; across omux the plain name means SwiftUI's.
+typealias Color = SwiftUI.Color
+
 enum Theme: String, CaseIterable, Identifiable {
     case black, dark, graphite, midnight, dracula, nord, oneDark, gruvbox, solarizedDark,
         catppuccinMocha, tokyoNight, rosePine, light, solarizedLight, catppuccinLatte
@@ -55,6 +58,50 @@ enum Theme: String, CaseIterable, Identifiable {
 
     /// 16 ANSI colours (normal 0-7, bright 8-15).
     var palette: [SwiftTerm.Color] {
+        paletteHex.map { v in
+            SwiftTerm.Color(red: UInt16((v >> 16) & 0xFF) * 257,
+                            green: UInt16((v >> 8) & 0xFF) * 257,
+                            blue: UInt16(v & 0xFF) * 257)
+        }
+    }
+
+    /// The plain themes keep macOS's colors; the others have a palette of their own.
+    private var hasOwnColors: Bool {
+        switch self {
+        case .black, .dark, .graphite, .light: return false
+        default: return true
+        }
+    }
+
+    private func ansi(_ index: Int) -> Color { Color(nsColor: NSColor(hex: paletteHex[index])) }
+
+    /// Working, needs-you, done and error, in the theme's own colors so the sidebar and
+    /// header match the terminal.
+    func statusColor(_ state: TabRuntime.StatusState?) -> Color? {
+        guard let state, state != .idle else { return nil }
+        guard hasOwnColors else {
+            switch state {
+            case .working: return .blue
+            case .blocked: return .orange
+            case .done: return .green
+            case .error: return .red
+            case .idle: return nil
+            }
+        }
+        switch state {
+        // Rosé Pine has no green; its foam and iris keep done and working apart.
+        case .working: return self == .rosePine ? Color(nsColor: NSColor(hex: 0xC4A7E7)) : ansi(4)
+        case .blocked: return ansi(3)
+        case .done: return self == .rosePine ? ansi(4) : ansi(2)
+        case .error: return ansi(1)
+        case .idle: return nil
+        }
+    }
+
+    /// Selection and highlight color: the theme's blue, or the system accent for plain themes.
+    var accent: Color { hasOwnColors ? statusColor(.working)! : .accentColor }
+
+    private var paletteHex: [UInt32] {
         var hex: [UInt32]
         switch self {
         case .midnight:
@@ -102,11 +149,7 @@ enum Theme: String, CaseIterable, Identifiable {
         case .catppuccinLatte: hex[7] = 0x6C6F85; hex[15] = 0x4C4F69
         default: break
         }
-        return hex.map { v in
-            SwiftTerm.Color(red: UInt16((v >> 16) & 0xFF) * 257,
-                            green: UInt16((v >> 8) & 0xFF) * 257,
-                            blue: UInt16(v & 0xFF) * 257)
-        }
+        return hex
     }
 }
 
@@ -156,6 +199,36 @@ struct IconButtonStyle: ButtonStyle {
                 )
                 .opacity(isEnabled ? 1 : 0.4)
                 .onHover { hovering = $0 }
+        }
+    }
+}
+
+private struct ThemeKey: EnvironmentKey {
+    static let defaultValue = Theme.dark
+}
+
+extension EnvironmentValues {
+    /// The current theme, for views that color themselves by it.
+    var omuxTheme: Theme {
+        get { self[ThemeKey.self] }
+        set { self[ThemeKey.self] = newValue }
+    }
+}
+
+/// A session's status dot: filled in the theme's status color, gray when idle, and a
+/// hollow ring when the session is stopped. The session's own color has its own bar.
+struct StatusDot: View {
+    @Environment(\.omuxTheme) private var theme
+    let runtime: TabRuntime?
+    var size: CGFloat = 8
+
+    var body: some View {
+        if let color = theme.statusColor(runtime?.statusState) {
+            Circle().fill(color).frame(width: size, height: size)
+        } else if runtime?.exited ?? true {
+            Circle().strokeBorder(Color.secondary.opacity(0.7), lineWidth: 1.2).frame(width: size, height: size)
+        } else {
+            Circle().fill(Color.secondary.opacity(0.5)).frame(width: size, height: size)
         }
     }
 }

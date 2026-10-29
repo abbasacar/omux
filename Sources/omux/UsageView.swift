@@ -6,6 +6,7 @@ struct UsageView: View {
     @StateObject private var monitor = UsageMonitor()
     @State private var hovered: String?
     @AppStorage(Prefs.usageInterval) private var usageInterval = 300.0
+    @Environment(\.omuxTheme) private var theme
 
     var body: some View {
         HStack(spacing: 10) {
@@ -24,7 +25,8 @@ struct UsageView: View {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             Capsule().fill(.quaternary)
-                            Capsule().fill(limit.tint)
+                            // Below 70% the bar takes the theme's color; above, the warning colors.
+                            Capsule().fill(limit.percent >= 70 ? limit.tint : theme.accent)
                                 .frame(width: geo.size.width * CGFloat(min(limit.percent, 100)) / 100)
                         }
                     }

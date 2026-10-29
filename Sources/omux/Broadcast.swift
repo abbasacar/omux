@@ -38,9 +38,7 @@ struct BroadcastSheet: View {
                         set: { if $0 { targets.insert(entry.tab.id) } else { targets.remove(entry.tab.id) } }
                     )) {
                         HStack {
-                            Circle()
-                                .fill(store.runtime[entry.tab.id]?.statusColor ?? Color.secondary.opacity(0.35))
-                                .frame(width: 7, height: 7)
+                            StatusDot(runtime: store.runtime[entry.tab.id], size: 7)
                             Text(entry.tab.name)
                             Text(entry.group.name).foregroundStyle(.secondary)
                         }

@@ -16,6 +16,7 @@ First release of this fork ([abbasacar/omux](https://github.com/abbasacar/omux))
 - **Font zoom** (⌘= / ⌘− / ⌘0).
 - **Themes:** Catppuccin Mocha, Catppuccin Latte, Tokyo Night and Rosé Pine.
 - **`omux` command and `install.sh`**: `omux .` opens the current folder in omux.
+- For developers: with `defaults write net.pf1.omux debugHooks -bool true`, omux can save pictures of its own windows when asked (see `DebugHooks.swift`), for reviewing the UI without screen-recording permission.
 - **Recent conversations in the sidebar.** The last few Claude conversations that aren't open, one click from reopening, with Show All for the rest. The command palette finds old conversations too.
 - Conversations are labelled with the title Claude Code gives them instead of the first words of the first prompt.
 
@@ -23,6 +24,11 @@ First release of this fork ([abbasacar/omux](https://github.com/abbasacar/omux))
 
 ### Changed
 
+- Status colors (working, needs you, done, error), highlights and usage bars come from the theme, so Dracula, Nord, Catppuccin, Tokyo Night and the others look consistent; Dark, Black, Graphite and Light keep the system colors.
+- The status dot only shows status. A session's own color has its bar, so a red session no longer looks like an error.
+- Stopped sessions show a hollow dot instead of fading, so the sidebar doesn't look disabled after a relaunch.
+- The Recent section shows 3 conversations with "Show more" for up to 12.
+- A grid with a single session shows it normally, with a note and an Exit Grid button.
 - ⌘W asks before closing a session that still has something running, and closes the Settings window instead of a session when Settings is in front.
 - ⌘R no longer renames a session (it's left to the terminal); rename from the session's right-click menu or Edit Session (⌘I). ⌘1–9 are labelled "Session n in Project", which is what they always did.
 
@@ -36,8 +42,8 @@ First release of this fork ([abbasacar/omux](https://github.com/abbasacar/omux))
 - "Next Session Needing You" in the menu bar brings back a closed window.
 - Icon buttons have bigger click targets, a hover highlight and VoiceOver labels.
 - Light themes: the terminal's white and bright white are readable grays; the needs-you banner and project names are easier to read.
-- The Recent section shows 3 conversations, so the session list keeps its room in a short window.
 - Broadcast's Send button is the default button and shows its ⌘↩ shortcut.
+- A session's color bar sat across its name instead of on the row's edge.
 - Buttons at the top of the sidebar, the session header and the right panel's tabs didn't respond to clicks on newer macOS, where the title bar took the click. They now sit below it.
 
 ## [0.3.0] - 2026-10-29
