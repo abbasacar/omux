@@ -189,6 +189,20 @@ struct TabRow: View {
         .buttonStyle(.plain)
         .opacity(rt.exited && !hovering ? 0.55 : 1)
         .padding(.vertical, 2)
+        // The color you picked, kept apart from the status dot so it always shows.
+        .background(alignment: .leading) {
+            if let tint = tab.color.color {
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(tint.opacity(0.13))
+                    .padding(.leading, -8)
+                    .padding(.trailing, -4)
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(tint)
+                    .frame(width: 3)
+                    .padding(.vertical, 3)
+                    .offset(x: -8)
+            }
+        }
         .onHover { over in
             hovering = over
             if over { store.refreshBusy(tab.id) }
@@ -344,11 +358,15 @@ struct TabMenu: View {
     var body: some View {
         Button("Rename") { store.renamingID = tab.id }
         Button("Edit Session…") { store.editingTabID = tab.id }
-        Menu("Color") {
+        Picker("Color", selection: Binding(
+            get: { store.tab(tab.id)?.color ?? .none },
+            set: { color in store.updateTab(tab.id) { $0.color = color } }
+        )) {
             ForEach(TabColor.allCases) { color in
-                Button(color.label) { store.updateTab(tab.id) { $0.color = color } }
+                Label { Text(color.label) } icon: { Image(nsImage: color.swatch) }.tag(color)
             }
         }
+        .pickerStyle(.menu)
         if store.groups.count > 1 {
             Menu("Move to") {
                 ForEach(store.groups.filter { $0.id != groupID }) { group in

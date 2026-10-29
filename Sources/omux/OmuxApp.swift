@@ -301,6 +301,7 @@ struct SessionHeader: View {
         .padding(.horizontal, 10)
         .frame(height: 28)
         .background(Color(nsColor: theme.chrome))
+        .sessionColorBar(store.selectedTab?.color ?? .none)
         .overlay(alignment: .bottom) { Rectangle().fill(.primary.opacity(0.08)).frame(height: 1) }
     }
 }

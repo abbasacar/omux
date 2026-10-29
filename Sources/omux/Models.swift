@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import SwiftUI
 
@@ -26,6 +27,43 @@ enum TabColor: String, Codable, CaseIterable, Identifiable {
     }
 
     var label: String { self == .none ? "None" : rawValue.capitalized }
+
+    /// A filled circle for menus, which otherwise draw symbols in one color.
+    var swatch: NSImage {
+        let size = NSSize(width: 12, height: 12)
+        let image = NSImage(size: size, flipped: false) { rect in
+            let path = NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1))
+            if let color {
+                NSColor(color).setFill()
+                path.fill()
+            } else {
+                NSColor.secondaryLabelColor.setStroke()
+                path.lineWidth = 1
+                path.stroke()
+            }
+            return true
+        }
+        image.isTemplate = false
+        return image
+    }
+}
+
+extension View {
+    /// The session's own color as a bar on the leading edge, apart from the status dot.
+    @ViewBuilder
+    func sessionColorBar(_ color: TabColor, inset: CGFloat = 0) -> some View {
+        if let tint = color.color {
+            overlay(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(tint)
+                    .frame(width: 3)
+                    .padding(.vertical, inset)
+                    .allowsHitTesting(false)
+            }
+        } else {
+            self
+        }
+    }
 }
 
 struct TabItem: Identifiable, Codable, Hashable {
