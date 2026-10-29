@@ -8,6 +8,11 @@ Built with SwiftUI and [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm).
 
 ## Features
 
+- **Grid view** (⇧⌘G). Every running session in the project, tiled side by side and sized to keep terminals readable. Click into a tile to select it; double-click its header to show it alone.
+- **Broadcast** (⇧⌘B). Type one prompt and send it to any set of running sessions, for example every session in a project.
+- **Command palette** (⌘K). Jump to a session or run any command, including switching themes. Fuzzy matching, ↑/↓ to move, `>` to search only commands.
+- **Needs-you triage.** The sidebar shows how many sessions are waiting on you; ⌘J jumps to the next one.
+- **Menu bar status.** A menu bar icon shows a count while sessions need you and lists every session with its status. Turn it off in Settings › Menu Bar.
 - **Projects and sessions.** A project is a folder plus a default command; sessions live under it in the sidebar. Drag to reorder or move sessions between projects, rename them, and give them colors.
 - **Conversations that resume.** Each session that runs `claude` is pinned to its own session id, so quitting and reopening omux continues the same conversation.
 - **Live status.** Each session shows whether Claude is working, needs you or is done, and the Dock badge counts sessions waiting on you.
@@ -23,13 +28,24 @@ Built with SwiftUI and [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm).
 - **Recent conversations** (⇧⌘O). Reopen any Claude Code conversation found in `~/.claude/projects`.
 - **Usage limits.** The sidebar shows your Claude plan's 5-hour and weekly limits (see [Privacy](#privacy)).
 - **Open folders from anywhere.** Finder's right-click "Open in omux" service, dropping a folder on the Dock icon, or `open -a omux <folder>`.
-- Themes, terminal font and size, and a quick switcher (⌘K).
+- **`omux` command.** `omux .` opens the current folder from any terminal.
+- Fifteen themes, including Catppuccin, Tokyo Night and Rosé Pine, plus terminal font and size (⌘+ / ⌘− / ⌘0).
 
 ## Requirements
 
 - macOS 14 or later
 - Swift 5.9 or later (Xcode 15+ or the Command Line Tools)
 - [Claude Code](https://claude.com/claude-code) installed as `claude` for Claude sessions; plain shell sessions work without it
+
+## Install
+
+```sh
+git clone https://github.com/onurozcan/omux && cd omux
+./install.sh
+omux .
+```
+
+`install.sh` runs `build.sh`, then links the `omux` command into `~/.local/bin` (set `OMUX_BIN_DIR` to change it).
 
 ## Build
 
@@ -52,7 +68,11 @@ open /Applications/omux.app
 | Restart session | ⇧⌘R |
 | Interrupt (Ctrl-C) | ⇧⌘. |
 | Continue Claude conversation | ⇧⌘↩ |
-| Jump to session | ⌘K |
+| Command palette / jump to session | ⌘K |
+| Next session needing you | ⌘J |
+| Grid view | ⇧⌘G |
+| Broadcast to sessions | ⇧⌘B |
+| Bigger / smaller / actual font size | ⌘+ / ⌘− / ⌘0 |
 | Next / previous session | ⇧⌘] / ⇧⌘[ |
 | Session 1–9 in the current project | ⌘1 … ⌘9 |
 | Right panel / Files / Changes / Browser | ⌥⌘F / ⌥⌘1 / ⌥⌘2 / ⌥⌘3 |

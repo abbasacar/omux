@@ -45,6 +45,27 @@ struct Sidebar: View {
             .padding(.trailing, 12)
             .frame(height: 28)
 
+            if store.attentionCount > 0 {
+                Button { store.selectNextNeedingYou() } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "bell.fill")
+                        Text("\(store.attentionCount) session\(store.attentionCount == 1 ? " needs" : "s need") you")
+                        Spacer()
+                        Text("⌘J").font(.caption.monospaced()).opacity(0.7)
+                    }
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 10)
+                    .frame(height: 24)
+                    .background(.orange.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 10)
+                .padding(.bottom, 4)
+                .help("Jump to the next session waiting on you")
+            }
+
             List(selection: $store.selectedTabID) {
                 ForEach(rows) { row in
                     switch row {

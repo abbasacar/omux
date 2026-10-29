@@ -2,7 +2,7 @@ import AppKit
 import Combine
 import SwiftUI
 
-extension UUID: Identifiable {
+extension UUID: @retroactive Identifiable {
     public var id: UUID { self }
 }
 
@@ -32,6 +32,7 @@ final class Store: ObservableObject {
     @Published var editingGroupID: UUID?
     @Published var showQuickSwitcher = false
     @Published var showRecentSessions = false
+    @Published var showBroadcast = false
     /// A file the user ⌘-clicked in a terminal; the files panel shows it.
     @Published var previewRequest: String?
     /// File paths mentioned in the selected session's output, newest last.
@@ -77,6 +78,15 @@ final class Store: ObservableObject {
             DispatchQueue.main.async {
                 if let id = Store.shared.selectedTabID { Store.shared.clearAttention(id) }
             }
+        }
+
+        // A click into a terminal (a grid tile) selects its session. SwiftTerm doesn't let
+        // us override its focus methods, so check who has focus once the click lands.
+        NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { event in
+            DispatchQueue.main.async {
+                (event.window?.firstResponder as? TermView)?.emit(.focused)
+            }
+            return event
         }
 
         if saved == nil { save() }
@@ -392,6 +402,9 @@ final class Store: ObservableObject {
             update(id) { $0.exited = true; $0.statusState = nil; $0.statusKind = nil; $0.statusChildren = []; $0.busy = false }
         case .openPath(let path):
             previewRequest = path
+        case .focused:
+            // Clicking a grid tile makes it the selected session.
+            if selectedTabID != id { selectedTabID = id }
         case .status(let state, let kind, let message, let children):
             let previous = runtime[id]?.statusState
             update(id) {
@@ -633,6 +646,40 @@ final class Store: ObservableObject {
     func selectIndex(_ index: Int) {
         guard let group = selectedGroup, group.tabs.indices.contains(index) else { return }
         selectedTabID = group.tabs[index].id
+    }
+
+    /// Sessions the grid tiles: the selected project's sessions that have a live
+    /// terminal, plus the selected one, in sidebar order.
+    var gridTabIDs: [UUID] {
+        guard let group = selectedGroup else { return [] }
+        return group.tabs.map(\.id).filter { id in
+            id == selectedTabID || (terminals[id] != nil && !(runtime[id]?.exited ?? true))
+        }
+    }
+
+    /// Sessions with a running shell, in sidebar order, for broadcasting a prompt.
+    var liveTabs: [(tab: TabItem, group: TabGroup)] {
+        allTabs.filter { terminals[$0.tab.id] != nil && !(runtime[$0.tab.id]?.exited ?? true) }
+    }
+
+    var attentionCount: Int { runtime.values.filter(\.needsAttention).count }
+
+    /// Cycles through sessions waiting on you: blocked on a prompt first, then flagged ones.
+    func selectNextNeedingYou() {
+        let ids = allTabs.map(\.tab.id)
+        let waiting = ids.filter { runtime[$0]?.statusState == .blocked || runtime[$0]?.needsAttention == true }
+        guard !waiting.isEmpty else { NSSound.beep(); return }
+        let start = selectedTabID.flatMap(ids.firstIndex(of:)) ?? -1
+        let next = waiting.first { ids.firstIndex(of: $0)! > start } ?? waiting[0]
+        selectedTabID = next
+    }
+
+    /// Steps the terminal font size; 0 resets it.
+    func zoomFont(_ step: Int) {
+        let defaults = UserDefaults.standard
+        let current = defaults.double(forKey: Prefs.fontSize) > 0 ? defaults.double(forKey: Prefs.fontSize) : 13
+        let size = step == 0 ? 13 : min(max(current + Double(step), 9), 28)
+        defaults.set(size, forKey: Prefs.fontSize)
     }
 
     func selectRelative(_ offset: Int) {

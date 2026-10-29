@@ -3,7 +3,8 @@ import SwiftTerm
 import SwiftUI
 
 enum Theme: String, CaseIterable, Identifiable {
-    case black, dark, graphite, midnight, dracula, nord, oneDark, gruvbox, solarizedDark, light, solarizedLight
+    case black, dark, graphite, midnight, dracula, nord, oneDark, gruvbox, solarizedDark,
+        catppuccinMocha, tokyoNight, rosePine, light, solarizedLight, catppuccinLatte
 
     var id: String { rawValue }
 
@@ -12,6 +13,10 @@ enum Theme: String, CaseIterable, Identifiable {
         case .oneDark: return "One Dark"
         case .solarizedDark: return "Solarized Dark"
         case .solarizedLight: return "Solarized Light"
+        case .catppuccinMocha: return "Catppuccin Mocha"
+        case .catppuccinLatte: return "Catppuccin Latte"
+        case .tokyoNight: return "Tokyo Night"
+        case .rosePine: return "Rosé Pine"
         default: return rawValue.capitalized
         }
     }
@@ -20,7 +25,7 @@ enum Theme: String, CaseIterable, Identifiable {
         Theme(rawValue: UserDefaults.standard.string(forKey: Prefs.theme) ?? "") ?? .dark
     }
 
-    var isLight: Bool { self == .light || self == .solarizedLight }
+    var isLight: Bool { self == .light || self == .solarizedLight || self == .catppuccinLatte }
     var colorScheme: ColorScheme { isLight ? .light : .dark }
 
     /// background, chrome (sidebar/header), foreground
@@ -37,6 +42,10 @@ enum Theme: String, CaseIterable, Identifiable {
         case .solarizedDark: return (0x002B36, 0x073642, 0x839496)
         case .light: return (0xFBFBFB, 0xEFEFF1, 0x1F1F1F)
         case .solarizedLight: return (0xFDF6E3, 0xEEE8D5, 0x657B83)
+        case .catppuccinMocha: return (0x1E1E2E, 0x181825, 0xCDD6F4)
+        case .tokyoNight: return (0x1A1B26, 0x16161E, 0xC0CAF5)
+        case .rosePine: return (0x191724, 0x1F1D2E, 0xE0DEF4)
+        case .catppuccinLatte: return (0xEFF1F5, 0xE6E9EF, 0x4C4F69)
         }
     }
 
@@ -66,6 +75,18 @@ enum Theme: String, CaseIterable, Identifiable {
         case .solarizedDark, .solarizedLight:
             hex = [0x073642, 0xDC322F, 0x859900, 0xB58900, 0x268BD2, 0xD33682, 0x2AA198, 0xEEE8D5,
                    0x002B36, 0xCB4B16, 0x586E75, 0x657B83, 0x839496, 0x6C71C4, 0x93A1A1, 0xFDF6E3]
+        case .catppuccinMocha:
+            hex = [0x45475A, 0xF38BA8, 0xA6E3A1, 0xF9E2AF, 0x89B4FA, 0xF5C2E7, 0x94E2D5, 0xBAC2DE,
+                   0x585B70, 0xF38BA8, 0xA6E3A1, 0xF9E2AF, 0x89B4FA, 0xF5C2E7, 0x94E2D5, 0xA6ADC8]
+        case .tokyoNight:
+            hex = [0x15161E, 0xF7768E, 0x9ECE6A, 0xE0AF68, 0x7AA2F7, 0xBB9AF7, 0x7DCFFF, 0xA9B1D6,
+                   0x414868, 0xF7768E, 0x9ECE6A, 0xE0AF68, 0x7AA2F7, 0xBB9AF7, 0x7DCFFF, 0xC0CAF5]
+        case .rosePine:
+            hex = [0x26233A, 0xEB6F92, 0x31748F, 0xF6C177, 0x9CCFD8, 0xC4A7E7, 0xEBBCBA, 0xE0DEF4,
+                   0x6E6A86, 0xEB6F92, 0x31748F, 0xF6C177, 0x9CCFD8, 0xC4A7E7, 0xEBBCBA, 0xE0DEF4]
+        case .catppuccinLatte:
+            hex = [0x5C5F77, 0xD20F39, 0x40A02B, 0xDF8E1D, 0x1E66F5, 0xEA76CB, 0x179299, 0xACB0BE,
+                   0x6C6F85, 0xD20F39, 0x40A02B, 0xDF8E1D, 0x1E66F5, 0xEA76CB, 0x179299, 0xBCC0CC]
         case .light:
             hex = [0x000000, 0xC91B00, 0x00A600, 0x9A7B00, 0x0225C7, 0xCA30C7, 0x00A2B2, 0xBFBFBF,
                    0x686868, 0xFF6E67, 0x2EB84A, 0xC7A500, 0x6871FF, 0xFF77FF, 0x1BA8B5, 0xFFFFFF]

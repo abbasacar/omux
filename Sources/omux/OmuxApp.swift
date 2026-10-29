@@ -5,6 +5,7 @@ import SwiftUI
 struct OmuxApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = Store.shared
+    @AppStorage(Prefs.showMenuBar) private var showMenuBar = true
 
     var body: some Scene {
         Window("omux", id: "main") {
@@ -17,6 +18,62 @@ struct OmuxApp: App {
         .commands { AppCommands(store: store) }
 
         Settings { SettingsView() }
+
+        MenuBarExtra(isInserted: $showMenuBar) {
+            MenuBarContent().environmentObject(store)
+        } label: {
+            MenuBarLabel().environmentObject(store)
+        }
+    }
+}
+
+/// The menu bar icon: a terminal glyph, with a count while sessions wait on you.
+struct MenuBarLabel: View {
+    @EnvironmentObject var store: Store
+
+    var body: some View {
+        let waiting = store.attentionCount
+        if waiting > 0 {
+            Label("\(waiting)", systemImage: "bell.badge.fill").labelStyle(.titleAndIcon)
+        } else {
+            Image(systemName: store.runtime.values.contains { $0.statusState == .working } ? "terminal.fill" : "terminal")
+        }
+    }
+}
+
+/// Every session with its status; picking one brings omux forward on it.
+struct MenuBarContent: View {
+    @EnvironmentObject var store: Store
+
+    var body: some View {
+        ForEach(store.groups) { group in
+            Section(group.name) {
+                ForEach(group.tabs) { tab in
+                    let rt = store.runtime[tab.id] ?? TabRuntime()
+                    Button {
+                        store.reveal(tab.id)
+                    } label: {
+                        Text("\(Self.symbol(rt)) \(tab.name)  —  \(rt.statusLine(showFolder: false) ?? "Idle")")
+                    }
+                }
+            }
+        }
+        Divider()
+        Button("Next Session Needing You") { NSApp.activate(); store.selectNextNeedingYou() }
+            .disabled(store.attentionCount == 0)
+        Button("Open omux") { AppDelegate.openWindow?(id: "main"); NSApp.activate() }
+        Divider()
+        Button("Quit omux") { NSApp.terminate(nil) }
+    }
+
+    private static func symbol(_ rt: TabRuntime) -> String {
+        switch rt.statusState {
+        case .blocked: return "🟠"
+        case .working: return "🔵"
+        case .done: return "🟢"
+        case .error: return "🔴"
+        default: return rt.needsAttention ? "🔔" : rt.exited ? "⚪️" : "⚫️"
+        }
     }
 }
 
@@ -36,6 +93,8 @@ enum Prefs {
     static let notifyNeedsYou = "notifyNeedsYou"
     static let notifyDone = "notifyDone"
     static let notifyPrograms = "notifyPrograms"
+    static let gridMode = "gridMode"
+    static let showMenuBar = "showMenuBar"
 }
 
 struct SettingsView: View {
@@ -50,6 +109,7 @@ struct SettingsView: View {
     @AppStorage(Prefs.notifyNeedsYou) private var notifyNeedsYou = true
     @AppStorage(Prefs.notifyDone) private var notifyDone = false
     @AppStorage(Prefs.notifyPrograms) private var notifyPrograms = true
+    @AppStorage(Prefs.showMenuBar) private var showMenuBar = true
 
     var body: some View {
         Form {
@@ -61,7 +121,10 @@ struct SettingsView: View {
                     Text("System Mono").tag("")
                     ForEach(Fonts.monospaceFamilies, id: \.self) { Text($0).tag($0) }
                 }
-                Stepper("Font size: \(Int(fontSize)) pt", value: $fontSize, in: 9 ... 24)
+                Stepper("Font size: \(Int(fontSize)) pt", value: $fontSize, in: 9 ... 28)
+                Text("⌘+ and ⌘− change it from anywhere, ⌘0 resets it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("Sidebar") {
                 Toggle("Show folder path under session name", isOn: $showFolderPath)
@@ -71,6 +134,9 @@ struct SettingsView: View {
                     Text("30 minutes").tag(1800.0)
                     Text("Hour").tag(3600.0)
                 }
+            }
+            Section("Menu Bar") {
+                Toggle("Show session status in the menu bar", isOn: $showMenuBar)
             }
             Section("Files Panel") {
                 Toggle("Wrap long lines in file preview", isOn: $wrapLines)
@@ -106,6 +172,7 @@ struct ContentView: View {
     @AppStorage(Prefs.fontFamily) private var fontFamily = ""
     @AppStorage(Prefs.fontSize) private var fontSize = 13.0
     @AppStorage(Prefs.showFiles) private var showFiles = false
+    @AppStorage(Prefs.gridMode) private var gridMode = false
 
     private var theme: Theme { Theme(rawValue: themeName) ?? .dark }
 
@@ -130,8 +197,10 @@ struct ContentView: View {
         } detail: {
             HSplitView {
                 VStack(spacing: 0) {
-                    SessionHeader(theme: theme, showFiles: $showFiles)
-                    if let id = store.selectedTabID, let term = store.terminal(for: id) {
+                    SessionHeader(theme: theme, showFiles: $showFiles, gridMode: $gridMode)
+                    if gridMode, store.selectedTabID != nil {
+                        SessionGrid(theme: theme)
+                    } else if let id = store.selectedTabID, let term = store.terminal(for: id) {
                         TerminalHost(termView: term, theme: theme)
                     } else {
                         ContentUnavailableView("No session", systemImage: "terminal", description: Text("Press ⌘T to start one."))
@@ -162,6 +231,7 @@ struct ContentView: View {
         .sheet(item: $store.newWorktreeGroupID) { WorktreeSheet(groupID: $0).environmentObject(store) }
         .sheet(isPresented: $store.showQuickSwitcher) { QuickSwitcher().environmentObject(store) }
         .sheet(isPresented: $store.showRecentSessions) { RecentSessionsSheet().environmentObject(store) }
+        .sheet(isPresented: $store.showBroadcast) { BroadcastSheet().environmentObject(store) }
         .sheet(item: $store.editingTabID) { TabEditSheet(tabID: $0).environmentObject(store) }
         .sheet(item: $store.editingGroupID) { GroupEditSheet(groupID: $0).environmentObject(store) }
         .onAppear { AppDelegate.openWindow = openWindow }
@@ -173,6 +243,7 @@ struct SessionHeader: View {
     @EnvironmentObject var store: Store
     let theme: Theme
     @Binding var showFiles: Bool
+    @Binding var gridMode: Bool
 
     var body: some View {
         HStack(spacing: 10) {
@@ -215,6 +286,11 @@ struct SessionHeader: View {
             } else {
                 Spacer()
             }
+            Button { store.showBroadcast = true } label: { Image(systemName: "dot.radiowaves.left.and.right") }
+                .help("Broadcast a prompt to several sessions (⇧⌘B)")
+            Button { gridMode.toggle() } label: { Image(systemName: gridMode ? "square.grid.2x2.fill" : "square.grid.2x2") }
+                .foregroundStyle(gridMode ? .primary : .secondary)
+                .help("Grid: every running session in this project side by side (⇧⌘G)")
             Button { showFiles.toggle() } label: { Image(systemName: "sidebar.trailing") }
                 .foregroundStyle(showFiles ? .primary : .secondary)
                 .help("Files panel (⌥⌘F)")
@@ -253,6 +329,15 @@ struct AppCommands: Commands {
                 .keyboardShortcut("w", modifiers: [.command, .shift])
         }
         CommandGroup(after: .sidebar) {
+            Button("Grid View") {
+                UserDefaults.standard.set(!UserDefaults.standard.bool(forKey: Prefs.gridMode), forKey: Prefs.gridMode)
+            }
+            .keyboardShortcut("g", modifiers: [.command, .shift])
+            Divider()
+            Button("Bigger Font") { store.zoomFont(1) }.keyboardShortcut("=")
+            Button("Smaller Font") { store.zoomFont(-1) }.keyboardShortcut("-")
+            Button("Actual Font Size") { store.zoomFont(0) }.keyboardShortcut("0")
+            Divider()
             Button("Files Panel") {
                 UserDefaults.standard.set(!UserDefaults.standard.bool(forKey: Prefs.showFiles), forKey: Prefs.showFiles)
             }
@@ -272,7 +357,9 @@ struct AppCommands: Commands {
             Button("Continue Claude Conversation") { if let id = store.selectedTabID { store.start(id) } }
                 .keyboardShortcut(.return, modifiers: [.command, .shift])
             Divider()
-            Button("Jump to Session…") { store.showQuickSwitcher = true }.keyboardShortcut("k")
+            Button("Command Palette…") { store.showQuickSwitcher = true }.keyboardShortcut("k")
+            Button("Next Session Needing You") { store.selectNextNeedingYou() }.keyboardShortcut("j")
+            Button("Broadcast to Sessions…") { store.showBroadcast = true }.keyboardShortcut("b", modifiers: [.command, .shift])
             Button("Next Session") { store.selectRelative(1) }.keyboardShortcut("]", modifiers: [.command, .shift])
             Button("Previous Session") { store.selectRelative(-1) }.keyboardShortcut("[", modifiers: [.command, .shift])
             Divider()

@@ -1,64 +1,168 @@
 import AppKit
 import SwiftUI
 
+/// ⌘K: jump to a session or run a command. Type to filter, ↑/↓ to move, Return to pick.
 struct QuickSwitcher: View {
     @EnvironmentObject var store: Store
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
+    @State private var selection = 0
     @FocusState private var focused: Bool
 
-    private struct Match: Identifiable {
-        let tab: TabItem
-        let group: TabGroup
-        var id: UUID { tab.id }
+    private struct Item: Identifiable {
+        let id: String
+        let title: String
+        var detail: String?
+        var shortcut: String?
+        var icon: String?
+        var dot: Color?
+        let run: () -> Void
     }
 
-    private var matches: [Match] {
-        store.allTabs
-            .map { Match(tab: $0.tab, group: $0.group) }
-            .filter { m in
-                query.isEmpty ||
-                    "\(m.tab.name) \(m.group.name) \(store.runtime[m.tab.id]?.title ?? "")"
-                    .localizedCaseInsensitiveContains(query)
+    private var sessions: [Item] {
+        store.allTabs.map { entry in
+            let rt = store.runtime[entry.tab.id]
+            return Item(id: entry.tab.id.uuidString, title: entry.tab.name,
+                        detail: [entry.group.name, rt?.statusLine()].compactMap { $0 }.joined(separator: " · "),
+                        dot: rt?.statusColor ?? entry.tab.color.color ?? Color.secondary.opacity(0.35)) {
+                store.selectedTabID = entry.tab.id
             }
+        }
+    }
+
+    private var commands: [Item] {
+        let id = store.selectedTabID
+        let toggle = { (key: String) in UserDefaults.standard.set(!UserDefaults.standard.bool(forKey: key), forKey: key) }
+        return [
+            Item(id: "new", title: "New Session", shortcut: "⌘T", icon: "plus") { store.newTab() },
+            Item(id: "shell", title: "New Shell", shortcut: "⇧⌘T", icon: "terminal") { store.newTab(command: "") },
+            Item(id: "worktree", title: "New Session in Worktree…", shortcut: "⌥⌘T", icon: "arrow.triangle.branch") {
+                if let g = store.selectedGroup?.id { store.newWorktreeGroupID = g }
+            },
+            Item(id: "project", title: "New Project", shortcut: "⇧⌘N", icon: "folder.badge.plus") { store.newGroup() },
+            Item(id: "open", title: "Open Folder…", shortcut: "⌘O", icon: "folder") { store.openFolderPanel() },
+            Item(id: "recent", title: "Open Recent Claude Session…", shortcut: "⇧⌘O", icon: "clock.arrow.circlepath") {
+                store.showRecentSessions = true
+            },
+            Item(id: "grid", title: "Toggle Grid View", shortcut: "⇧⌘G", icon: "square.grid.2x2") { toggle(Prefs.gridMode) },
+            Item(id: "broadcast", title: "Broadcast to Sessions…", shortcut: "⇧⌘B", icon: "dot.radiowaves.left.and.right") {
+                store.showBroadcast = true
+            },
+            Item(id: "attention", title: "Next Session Needing You", shortcut: "⌘J", icon: "bell") { store.selectNextNeedingYou() },
+            Item(id: "panel", title: "Toggle Right Panel", shortcut: "⌥⌘F", icon: "sidebar.trailing") { toggle(Prefs.showFiles) },
+            Item(id: "files", title: "Show Files", shortcut: "⌥⌘1", icon: "doc") { store.showPanel(.files) },
+            Item(id: "changes", title: "Show Changes", shortcut: "⌥⌘2", icon: "plusminus") { store.showPanel(.changes) },
+            Item(id: "browser", title: "Show Browser", shortcut: "⌥⌘3", icon: "globe") { store.showPanel(.browser) },
+            Item(id: "continue", title: "Continue Claude Conversation", shortcut: "⇧⌘↩", icon: "play") {
+                if let id { store.start(id) }
+            },
+            Item(id: "restart", title: "Restart Session", shortcut: "⇧⌘R", icon: "arrow.clockwise") { if let id { store.restart(id) } },
+            Item(id: "interrupt", title: "Interrupt (Ctrl-C)", shortcut: "⇧⌘.", icon: "stop") { if let id { store.stop(id) } },
+            Item(id: "edit", title: "Edit Session…", shortcut: "⌘I", icon: "slider.horizontal.3") { store.editingTabID = id },
+            Item(id: "close", title: "Close Session", shortcut: "⌘W", icon: "xmark") { if let id { store.requestClose(id) } },
+            Item(id: "bigger", title: "Bigger Font", shortcut: "⌘+", icon: "textformat.size.larger") { store.zoomFont(1) },
+            Item(id: "smaller", title: "Smaller Font", shortcut: "⌘−", icon: "textformat.size.smaller") { store.zoomFont(-1) },
+        ] + Theme.allCases.map { theme in
+            Item(id: "theme-\(theme.rawValue)", title: "Theme: \(theme.label)", icon: "paintpalette") {
+                UserDefaults.standard.set(theme.rawValue, forKey: Prefs.theme)
+            }
+        }
+    }
+
+    /// Sessions first; commands join once you type, or alone after a leading ">".
+    private var items: [Item] {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        if trimmed.hasPrefix(">") {
+            let q = trimmed.dropFirst().trimmingCharacters(in: .whitespaces)
+            return commands.filter { q.isEmpty || Self.fuzzy($0.title, q) }
+        }
+        if trimmed.isEmpty { return sessions }
+        return sessions.filter { Self.fuzzy("\($0.title) \($0.detail ?? "")", trimmed) }
+            + commands.filter { Self.fuzzy($0.title, trimmed) }
+    }
+
+    /// Every query character appears in order, so "nws" finds "New Session".
+    static func fuzzy(_ text: String, _ query: String) -> Bool {
+        if text.localizedCaseInsensitiveContains(query) { return true }
+        var rest = Substring(query.lowercased().filter { !$0.isWhitespace })
+        for ch in text.lowercased() where ch == rest.first {
+            rest = rest.dropFirst()
+            if rest.isEmpty { return true }
+        }
+        return rest.isEmpty
     }
 
     var body: some View {
+        let list = items
         VStack(spacing: 0) {
-            TextField("Jump to session…", text: $query)
-                .textFieldStyle(.plain)
-                .font(.title3)
-                .padding(12)
-                .focused($focused)
-                .onSubmit { if let first = matches.first { pick(first.id) } }
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Jump to session, or > for commands…", text: $query)
+                    .textFieldStyle(.plain)
+                    .font(.title3)
+                    .focused($focused)
+                    .onSubmit { pick(list) }
+                    .onKeyPress(.downArrow) { move(1, count: list.count); return .handled }
+                    .onKeyPress(.upArrow) { move(-1, count: list.count); return .handled }
+            }
+            .padding(12)
             Divider()
-            List(matches.prefix(15)) { match in
-                Button { pick(match.id) } label: {
-                    HStack {
-                        Circle()
-                            .fill(store.runtime[match.id]?.statusColor ?? match.tab.color.color ?? Color.secondary.opacity(0.35))
-                            .frame(width: 8, height: 8)
-                        Text(match.tab.name)
-                        Text(match.group.name).foregroundStyle(.secondary)
-                        Spacer()
-                        if let line = store.runtime[match.id]?.statusLine() {
-                            Text(line).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(list.enumerated()), id: \.element.id) { index, item in
+                            row(item, selected: index == selection)
+                                .id(index)
+                                .onTapGesture { selection = index; pick(list) }
                         }
                     }
-                    .contentShape(Rectangle())
+                    .padding(6)
                 }
-                .buttonStyle(.plain)
+                .onChange(of: selection) { _, value in proxy.scrollTo(value) }
             }
-            .listStyle(.plain)
+            if list.isEmpty {
+                Text("No matches").foregroundStyle(.secondary).frame(maxHeight: .infinity)
+            }
         }
-        .frame(width: 460, height: 380)
+        .frame(width: 520, height: 400)
         .onAppear { focused = true }
+        .onChange(of: query) { _, _ in selection = 0 }
         .onExitCommand { dismiss() }
     }
 
-    private func pick(_ id: UUID) {
-        store.selectedTabID = id
+    private func row(_ item: Item, selected: Bool) -> some View {
+        HStack(spacing: 8) {
+            if let dot = item.dot {
+                Circle().fill(dot).frame(width: 8, height: 8).frame(width: 16)
+            } else if let icon = item.icon {
+                Image(systemName: icon).foregroundStyle(.secondary).frame(width: 16)
+            }
+            Text(item.title).lineLimit(1)
+            if let detail = item.detail {
+                Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer()
+            if let shortcut = item.shortcut {
+                Text(shortcut).font(.caption.monospaced()).foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 28)
+        .background(selected ? Color.accentColor.opacity(0.22) : .clear, in: RoundedRectangle(cornerRadius: 6))
+        .contentShape(Rectangle())
+    }
+
+    private func move(_ step: Int, count: Int) {
+        guard count > 0 else { return }
+        selection = (selection + step + count) % count
+    }
+
+    private func pick(_ list: [Item]) {
+        guard list.indices.contains(selection) else { return }
+        let item = list[selection]
         dismiss()
+        // After the sheet closes, so commands that open another sheet can.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { item.run() }
     }
 }
 

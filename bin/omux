@@ -1,0 +1,15 @@
+#!/bin/zsh
+# omux [folder…]: opens folders as omux projects, the current folder by default.
+# Opening a folder that's already a project adds a new session to it.
+set -e
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+  echo "usage: omux [folder…]   open folders in omux (default: .)"
+  exit 0
+fi
+(( $# )) || set -- .
+paths=()
+for arg in "$@"; do
+  [[ -d "$arg" ]] || { echo "omux: not a folder: $arg" >&2; exit 1; }
+  paths+=("${arg:A}")
+done
+open -a omux "${paths[@]}"

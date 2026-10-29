@@ -13,6 +13,8 @@ enum TermEvent {
     case openPath(String)
     /// A desktop notification the program asked for (OSC 9 or OSC 777).
     case notification(title: String?, body: String)
+    /// The terminal took keyboard focus, e.g. a click on its tile in the grid.
+    case focused
 }
 
 /// Receives process callbacks on behalf of a TermView. Kept separate because
@@ -85,7 +87,7 @@ final class TermView: LocalProcessTerminalView {
         installColors(theme.palette)
     }
 
-    fileprivate func emit(_ event: TermEvent) {
+    func emit(_ event: TermEvent) {
         if Thread.isMainThread {
             onEvent?(event)
         } else {
@@ -190,8 +192,13 @@ final class TermView: LocalProcessTerminalView {
 struct TerminalHost: NSViewRepresentable {
     let termView: TermView
     let theme: Theme
+    /// Takes keyboard focus when attached. The grid shows many hosts but focuses one.
+    var focus = true
 
-    final class Coordinator { var currentID: UUID? }
+    final class Coordinator {
+        var currentID: UUID?
+        var hadFocus = false
+    }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -203,12 +210,18 @@ struct TerminalHost: NSViewRepresentable {
 
     func updateNSView(_ container: NSView, context: Context) {
         container.layer?.backgroundColor = theme.background.cgColor
-        guard context.coordinator.currentID != termView.tabID || termView.superview !== container else { return }
-        context.coordinator.currentID = termView.tabID
-        container.subviews.forEach { $0.removeFromSuperview() }
-        termView.frame = container.bounds
-        termView.autoresizingMask = [.width, .height]
-        container.addSubview(termView)
+        let attach = context.coordinator.currentID != termView.tabID || termView.superview !== container
+        // In the grid, a tile that becomes the selection (⌘J, the sidebar) takes the keyboard.
+        let gainedFocus = focus && !context.coordinator.hadFocus
+        context.coordinator.hadFocus = focus
+        if attach {
+            context.coordinator.currentID = termView.tabID
+            container.subviews.forEach { $0.removeFromSuperview() }
+            termView.frame = container.bounds
+            termView.autoresizingMask = [.width, .height]
+            container.addSubview(termView)
+        }
+        guard focus, attach || gainedFocus else { return }
         DispatchQueue.main.async {
             termView.window?.makeFirstResponder(termView)
         }
