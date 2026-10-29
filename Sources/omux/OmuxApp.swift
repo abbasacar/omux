@@ -96,7 +96,6 @@ enum Prefs {
     static let gridMode = "gridMode"
     static let showMenuBar = "showMenuBar"
     static let recentCollapsed = "recentCollapsed"
-    static let recentExpanded = "recentExpanded"
 }
 
 struct SettingsView: View {

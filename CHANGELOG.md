@@ -27,7 +27,7 @@ First release of this fork ([abbasacar/omux](https://github.com/abbasacar/omux))
 - Status colors (working, needs you, done, error), highlights and usage bars come from the theme, so Dracula, Nord, Catppuccin, Tokyo Night and the others look consistent; Dark, Black, Graphite and Light keep the system colors.
 - The status dot only shows status. A session's own color has its bar, so a red session no longer looks like an error.
 - Stopped sessions show a hollow dot instead of fading, so the sidebar doesn't look disabled after a relaunch.
-- The Recent section shows 3 conversations with "Show more" for up to 12.
+- The Recent section works like the Files browser: drag the divider above it to size it, and click its header to collapse it to one line.
 - A grid with a single session shows it normally, with a note and an Exit Grid button.
 - ⌘W asks before closing a session that still has something running, and closes the Settings window instead of a session when Settings is in front.
 - ⌘R no longer renames a session (it's left to the terminal); rename from the session's right-click menu or Edit Session (⌘I). ⌘1–9 are labelled "Session n in Project", which is what they always did.

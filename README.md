@@ -17,7 +17,7 @@ Version 0.4.0, on top of the original's 0.3.0:
 - **Grid view** (⇧⌘G). Every running session in the project, tiled side by side and sized to keep terminals readable. Click into a tile to type in it; double-click its header to show it alone.
 - **Broadcast** (⇧⌘B). Type one prompt and send it to any set of running sessions, for example every session in a project.
 - **Command palette** (⌘K). Jump to a session, reopen an old conversation or run any command, including switching themes. Fuzzy matching, ↑/↓ to move, `>` to search only commands.
-- **Recent conversations in the sidebar.** Your latest Claude conversations that aren't open, one click from reopening, with Show All for the rest. Conversations are labelled with the title Claude Code gives them instead of the first words of the first prompt.
+- **Recent conversations in the sidebar.** Your latest Claude conversations that aren't open, one click from reopening. Drag the divider above it to size it or click its header to collapse it, like the Files browser; Show All searches the rest. Conversations are labelled with the title Claude Code gives them instead of the first words of the first prompt.
 - **Needs-you triage.** A sidebar banner counts sessions waiting on you; ⌘J jumps to the next one.
 - **Menu bar status.** A menu bar icon lists every session with its status and shows a count while sessions need you. Turn it off in Settings › Menu Bar.
 - **Theme-matched colors.** Status dots, highlights and usage bars use the theme's own colors. A session's color shows as a bar and a tint on its row, and the dot only shows status, so a red session can't be mistaken for an error. Stopped sessions get a hollow dot instead of fading.

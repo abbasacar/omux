@@ -72,26 +72,30 @@ struct Sidebar: View {
                 .help("Jump to the next session waiting on you")
             }
 
-            List(selection: $store.selectedTabID) {
-                ForEach(rows) { row in
-                    switch row {
-                    case .group(let group):
-                        GroupHeader(group: group)
-                            .selectionDisabled()
-                            .listRowSeparator(.hidden)
-                    case .tab(let tab, let groupID):
-                        TabRow(tab: tab)
-                            .tag(tab.id)
-                            .padding(.leading, 10)
-                            .contextMenu { TabMenu(tab: tab, groupID: groupID) }
+            // Like the Files panel: drag the divider to size Recent, or collapse it to its header.
+            VSplitView {
+                List(selection: $store.selectedTabID) {
+                    ForEach(rows) { row in
+                        switch row {
+                        case .group(let group):
+                            GroupHeader(group: group)
+                                .selectionDisabled()
+                                .listRowSeparator(.hidden)
+                        case .tab(let tab, let groupID):
+                            TabRow(tab: tab)
+                                .tag(tab.id)
+                                .padding(.leading, 10)
+                                .contextMenu { TabMenu(tab: tab, groupID: groupID) }
+                        }
                     }
+                    .onMove { from, to in store.moveRows(rows, from: from, to: to) }
                 }
-                .onMove { from, to in store.moveRows(rows, from: from, to: to) }
+                .listStyle(.sidebar)
+                .scrollContentBackground(.hidden)
+                .frame(minHeight: 120)
+                .layoutPriority(1)
+                RecentSection()
             }
-            .listStyle(.sidebar)
-            .scrollContentBackground(.hidden)
-
-            RecentSection()
             Rectangle().fill(.primary.opacity(0.08)).frame(height: 1)
             UsageView()
         }
@@ -219,29 +223,30 @@ struct TabRow: View {
     }
 }
 
-/// The last few Claude conversations that aren't open, one click from reopening.
+/// Claude conversations that aren't open, one click from reopening. Sits under a divider
+/// in the sidebar: drag it to size the list, or click the header to collapse it.
 struct RecentSection: View {
     @EnvironmentObject var store: Store
     @AppStorage(Prefs.recentCollapsed) private var collapsed = false
-    @AppStorage(Prefs.recentExpanded) private var expanded = false
 
-    /// Three rows by default so the session list keeps its room; more on request, scrolling.
-    private static let shortCount = 3
-    private static let longCount = 12
+    /// Enough to scroll through; Show All searches every conversation.
+    private static let limit = 50
 
     var body: some View {
-        let all = store.closedRecentSessions
-        let recents = Array(all.prefix(expanded ? Self.longCount : Self.shortCount))
+        let recents = Array(store.closedRecentSessions.prefix(Self.limit))
         if !recents.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
-                Rectangle().fill(.primary.opacity(0.08)).frame(height: 1)
                 HStack(spacing: 6) {
-                    Button { withAnimation(.snappy(duration: 0.2)) { collapsed.toggle() } } label: {
+                    Button { collapsed.toggle() } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 7, weight: .bold))
                                 .rotationEffect(.degrees(collapsed ? 0 : 90))
+                                .frame(width: 10, height: 10)
                             Text("Recent").font(.system(size: 11, weight: .semibold))
+                            if collapsed {
+                                Text("\(recents.count)").font(.caption).foregroundStyle(.tertiary)
+                            }
                             Spacer()
                         }
                         .contentShape(Rectangle())
@@ -254,37 +259,19 @@ struct RecentSection: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 12)
-                .frame(height: 26)
+                .frame(height: 28)
                 if !collapsed {
-                    if expanded {
-                        ScrollView {
-                            VStack(spacing: 0) { ForEach(recents) { RecentRow(session: $0) } }
-                        }
-                        .frame(maxHeight: 300)
-                    } else {
-                        ForEach(recents) { RecentRow(session: $0) }
-                    }
-                    if all.count > Self.shortCount {
-                        Button {
-                            withAnimation(.snappy(duration: 0.2)) { expanded.toggle() }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                                    .font(.system(size: 8, weight: .bold))
-                                Text(expanded ? "Show less" : "Show \(min(all.count, Self.longCount) - Self.shortCount) more")
-                                Spacer()
-                            }
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 18)
-                            .frame(height: 22)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .help(expanded ? "Show fewer recent conversations" : "Show more recent conversations here")
+                    Rectangle().fill(.primary.opacity(0.08)).frame(height: 1)
+                    ScrollView {
+                        LazyVStack(spacing: 0) { ForEach(recents) { RecentRow(session: $0) } }
+                            .padding(.vertical, 2)
                     }
                 }
             }
+            // Collapsed, it's just the header; open, the divider sets its height.
+            // Open, at least three conversations show; drag the divider for more.
+            .frame(minHeight: collapsed ? 28 : 150, idealHeight: collapsed ? 28 : 200,
+                   maxHeight: collapsed ? 28 : .infinity, alignment: .top)
         }
     }
 }
