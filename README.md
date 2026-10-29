@@ -12,20 +12,20 @@ Built with SwiftUI and [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm).
 
 ## What this fork adds
 
-Version 0.4.0, on top of the original's 0.3.0:
+[Version 0.4.0](https://github.com/abbasacar/omux/releases/tag/v0.4.0), on top of the original's 0.3.0:
 
-- **Grid view** (⇧⌘G). Every running session in the project, tiled side by side and sized to keep terminals readable. Click into a tile to type in it; double-click its header to show it alone.
+- **Grid view** (⇧⌘G). Every running session in the project, tiled side by side and sized to keep terminals readable; it scrolls when more are running than fit. Click into a tile to type in it; double-click its header to show it alone.
 - **Broadcast** (⇧⌘B). Type one prompt and send it to any set of running sessions, for example every session in a project.
 - **Command palette** (⌘K). Jump to a session, reopen an old conversation or run any command, including switching themes. Fuzzy matching, ↑/↓ to move, `>` to search only commands.
 - **Recent conversations in the sidebar.** Your latest Claude conversations that aren't open, one click from reopening. Drag the divider above it to size it or click its header to collapse it, like the Files browser; Show All searches the rest. Conversations are labelled with the title Claude Code gives them instead of the first words of the first prompt.
-- **Instructions & Skills** (⇧⌘I). One window for everything that shapes Claude: your global and project `CLAUDE.md`, skills and custom agents (create them from a template, edit them, or see the ones synced from claude.ai), plus **omux-only instructions** that omux adds to every Claude session it starts, globally and per project, without touching your files.
+- **Instructions & Skills** (⇧⌘I). A window, beside your sessions, for everything that shapes Claude: your global and project `CLAUDE.md`, skills and custom agents (create them from a template, edit them, or see the ones synced from claude.ai), plus **omux-only instructions** that omux adds to every Claude session it starts, globally and per project, without touching your files. It follows the project selected in the main window. Changes apply to conversations started afterwards.
 - **Needs-you triage.** A sidebar banner counts sessions waiting on you; ⌘J jumps to the next one.
 - **Menu bar status.** A menu bar icon lists every session with its status and shows a count while sessions need you. Turn it off in Settings › Menu Bar.
 - **Theme-matched colors.** Status dots, highlights and usage bars use the theme's own colors. A session's color shows as a bar and a tint on its row, and the dot only shows status, so a red session can't be mistaken for an error. Stopped sessions get a hollow dot instead of fading.
 - **Font zoom** (⌘= / ⌘− / ⌘0) and four more themes: Catppuccin Mocha, Catppuccin Latte, Tokyo Night and Rosé Pine.
 - **`omux` command and `install.sh`.** `omux .` opens the current folder from any terminal.
 - **Safer ⌘W.** It asks before closing a session that still has something running, and in Settings it closes Settings instead of a session. ⌘R no longer renames, so it's free for the terminal.
-- **Fixes:** buttons at the top of the window didn't respond to clicks on newer macOS, where the title bar took the click. Plus a UI pass: bigger click targets and VoiceOver labels on icon buttons, a header that drops chips instead of buttons when narrow, readable white text on light themes, and palette and grid fixes.
+- **Fixes:** buttons at the top of the window didn't respond to clicks on newer macOS, where the title bar took the click. Plus a UI pass: bigger click targets and VoiceOver labels on icon buttons, a header that drops chips instead of buttons when narrow, and readable white text on light themes.
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 
@@ -65,7 +65,9 @@ omux .
 
 `install.sh` runs `build.sh`, then links the `omux` command into `~/.local/bin` (set `OMUX_BIN_DIR` to change it). If omux is already open, quit it (⌘Q) and reopen it to load the new build.
 
-To update later: `git pull && ./install.sh`.
+To update later: `git pull && ./install.sh`. To install a particular [release](https://github.com/abbasacar/omux/releases) instead of the latest code, run `git checkout v0.4.0` (or another version's tag) before `./install.sh`.
+
+Releases have no prebuilt app: it would need an Apple Developer ID signature for macOS to open it after a download, so omux is built on your Mac.
 
 ## Build
 
@@ -75,6 +77,16 @@ open /Applications/omux.app
 ```
 
 `build.sh` builds a release binary, assembles `build/omux.app`, and then **replaces `/Applications/omux.app`** so the Finder service and Dock entry stay registered. It signs with the first "Apple Development" certificate in your keychain, or ad hoc if there is none.
+
+### Reviewing the UI
+
+omux can capture its own windows, without screen-recording permission, for checking how changes look. Turn it on with `defaults write net.pf1.omux debugHooks -bool true` and restart omux, then post the distributed notification `net.pf1.omux.debug` with a command as its object, for example from a shell:
+
+```sh
+osascript -l JavaScript -e "ObjC.import('Foundation'); \$.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately('net.pf1.omux.debug', 'snapshot', \$(), true)"
+```
+
+`snapshot` saves each window to `~/Library/Caches/net.pf1.omux/snapshots/`. The other commands open the palette, broadcast, recent conversations or Instructions & Skills, and open or close test shell sessions; see `DebugHooks.swift`.
 
 ## Keyboard shortcuts
 
@@ -114,6 +126,7 @@ Local files omux touches:
 - Worktree sessions run `git` in your repository, and creating a pull request runs `git push` through your login shell. Nothing else is pushed or committed unless you confirm it.
 - Elements picked in the browser are saved under your temporary folder (`omux-picks`) so Claude can read them.
 - Settings are stored in the standard macOS preferences.
+- Only with the developer debug hooks turned on: window captures in `~/Library/Caches/net.pf1.omux/snapshots/`.
 
 ## Disclaimer
 

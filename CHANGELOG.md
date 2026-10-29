@@ -8,45 +8,35 @@ First release of this fork ([abbasacar/omux](https://github.com/abbasacar/omux))
 
 ### Added
 
-- **Grid view** (⇧⌘G): every running session in the project tiled side by side. Clicking into a tile selects that session; double-clicking its header shows it alone.
-- **Broadcast** (⇧⌘B): send one prompt to several running sessions.
-- **Command palette** (⌘K): the quick switcher also runs commands, with fuzzy matching and ↑/↓ navigation. Start with `>` to search only commands.
-- **Instructions & Skills** (⇧⌘I), in its own window that follows the selected project: edit the global and project `CLAUDE.md`, browse, create and edit skills and custom agents (synced claude.ai skills are shown read-only), and set **omux-only instructions**, globally and per project, which omux passes to every Claude session it starts with `--append-system-prompt`. Changes apply to conversations started afterwards.
+- **Grid view** (⇧⌘G): every running session in the project tiled side by side. Tiles keep a readable minimum size and the grid scrolls when more sessions are running than fit. Clicking into a tile selects that session; double-clicking its header shows it alone. With one session running, the grid shows it normally with an Exit Grid button.
+- **Broadcast** (⇧⌘B): send one prompt to several running sessions, such as every session in a project.
+- **Command palette** (⌘K): the quick switcher also reopens old conversations and runs commands, including switching themes. Fuzzy matching, ↑/↓ to move, `>` to search only commands.
+- **Recent conversations in the sidebar**: Claude conversations that aren't open, one click from reopening. Drag the divider above the section to size it, or click its header to collapse it, like the Files browser. Show All (⇧⌘O) searches every conversation.
+- **Conversation titles**: conversations are labelled with the title Claude Code gives them instead of the first words of the first prompt, in the sidebar, ⇧⌘O and ⌘K, and as the name of a reopened session.
+- **Instructions & Skills** (⇧⌘I), a window that follows the selected project: edit the global and project `CLAUDE.md`; browse, create and edit skills and custom agents (skills synced from claude.ai are shown read-only); and set **omux-only instructions**, globally and per project, which omux passes to every Claude session it starts with `--append-system-prompt`. Changes apply to conversations started afterwards.
 - **Next session needing you** (⌘J), and a sidebar banner counting sessions waiting on you.
-- **Menu bar status item** listing every session and its state, with a count while sessions need you.
+- **Menu bar status item** listing every session and its state, with a count while sessions need you. It can be turned off in Settings.
 - **Font zoom** (⌘= / ⌘− / ⌘0).
 - **Themes:** Catppuccin Mocha, Catppuccin Latte, Tokyo Night and Rosé Pine.
 - **`omux` command and `install.sh`**: `omux .` opens the current folder in omux.
-- For developers: with `defaults write net.pf1.omux debugHooks -bool true`, omux can save pictures of its own windows when asked (see `DebugHooks.swift`), for reviewing the UI without screen-recording permission.
-- **Recent conversations in the sidebar.** The last few Claude conversations that aren't open, one click from reopening, with Show All for the rest. The command palette finds old conversations too.
-- Conversations are labelled with the title Claude Code gives them instead of the first words of the first prompt.
-
-- A session's color shows as a bar and a tint on its row in the sidebar, so the status dot no longer hides it. The Color menu shows swatches and checks the current color.
+- For developers: opt-in debug hooks let omux capture its own windows and open test sessions on request, for reviewing the UI without screen-recording permission. See `DebugHooks.swift`.
 
 ### Changed
 
-- Status colors (working, needs you, done, error), highlights and usage bars come from the theme, so Dracula, Nord, Catppuccin, Tokyo Night and the others look consistent; Dark, Black, Graphite and Light keep the system colors.
-- The status dot only shows status. A session's own color has its bar, so a red session no longer looks like an error.
+- Status colors (working, needs you, done, error), highlights and usage bars come from the theme, so Dracula, Nord, Catppuccin, Tokyo Night and the others look consistent. Dark, Black, Graphite and Light keep the system colors.
+- A session's color shows as a bar and a tint on its row, and the status dot shows only status, so a red session no longer looks like an error. The Color menu shows swatches and checks the current color.
 - Stopped sessions show a hollow dot instead of fading, so the sidebar doesn't look disabled after a relaunch.
-- The Recent section works like the Files browser: drag the divider above it to size it, and click its header to collapse it to one line.
-- A grid with a single session shows it normally, with a note and an Exit Grid button.
 - ⌘W asks before closing a session that still has something running, and closes the Settings window instead of a session when Settings is in front.
-- ⌘R no longer renames a session (it's left to the terminal); rename from the session's right-click menu or Edit Session (⌘I). ⌘1–9 are labelled "Session n in Project", which is what they always did.
+- ⌘R no longer renames a session, so it's left to the terminal; rename from the session's right-click menu or Edit Session (⌘I). ⌘1–9 are labelled "Session n in Project", which is what they always did.
+- Icon buttons have bigger click targets, a hover highlight and VoiceOver labels.
+- The session header hides its chips and folder before its buttons when the window is narrow.
 
 ### Fixed
 
-- Grid: closing sessions until one is left could leave the grid blank until you left grid view.
-- Grid: tiles keep a minimum size and the grid scrolls when there are more sessions than fit; a single click on a tile's header selects it without waiting for a double click; a hint explains a grid with only one running session.
-- Command palette: ↑/↓ move the highlight; commands that open another window (Broadcast, Edit Session, Open Recent) open it; the mouse highlights rows. Commands that open a window are disabled while another one is open.
-- Clicking a session in the sidebar no longer risks selecting the terminal you were typing in again.
-- A new project's name field no longer loses focus to its terminal.
-- The session header hides its chips and folder before its buttons when the window is narrow.
-- "Next Session Needing You" in the menu bar brings back a closed window.
-- Icon buttons have bigger click targets, a hover highlight and VoiceOver labels.
-- Light themes: the terminal's white and bright white are readable grays; the needs-you banner and project names are easier to read.
-- Broadcast's Send button is the default button and shows its ⌘↩ shortcut.
-- A session's color bar sat across its name instead of on the row's edge.
 - Buttons at the top of the sidebar, the session header and the right panel's tabs didn't respond to clicks on newer macOS, where the title bar took the click. They now sit below it.
+- Light themes: the terminal's white and bright white were nearly invisible. They're readable grays now, and the needs-you banner and project names are easier to read.
+- A new project's name field could lose focus to its terminal before you typed a name.
+- A terminal could end up hidden when the view holding it was replaced, for example as grid tiles closed.
 
 ## [0.3.0] - 2026-10-29
 
@@ -87,7 +77,7 @@ First public release.
 - Recent Claude conversations (⇧⌘O), Claude plan usage limits in the sidebar, themes, terminal font settings and a quick switcher (⌘K).
 - Open folders from Finder's "Open in omux" service, the Dock icon or `open -a omux <folder>`.
 
-[0.4.0]: https://github.com/abbasacar/omux/compare/v0.3.0...main
+[0.4.0]: https://github.com/abbasacar/omux/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/onurozcan/omux/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/onurozcan/omux/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/onurozcan/omux/releases/tag/v0.1.0
